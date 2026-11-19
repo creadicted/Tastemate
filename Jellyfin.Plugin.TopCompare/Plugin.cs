@@ -44,6 +44,10 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             new PluginPageInfo
             {
                 Name = Name,
+                DisplayName = "Top Lists",
+                MenuSection = "server",
+                MenuIcon = "format_list_numbered",
+                EnableInMainMenu = true,
                 EmbeddedResourcePath = string.Format(CultureInfo.InvariantCulture, "{0}.Configuration.configPage.html", GetType().Namespace)
             }
         ];

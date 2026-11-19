@@ -4,13 +4,13 @@ guid: "0f930e3f-2977-4737-ac6f-65e6d9a4cc6d"
 version: "1.0.0.0"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
-overview: "Short description about your plugin"
+overview: "Create Top X movie lists per topic and compare rankings between users"
 description: >
-  This is a longer description that can span more than one
-  line and include details about your plugin.
+  Define topics such as "Top 10 Horror Movies". Every user ranks movies from the
+  library for a topic and can compare their list with another user's list.
 category: "General"
 owner: "jellyfin"
 artifacts:
 - "Jellyfin.Plugin.TopCompare.dll"
 changelog: >
-  changelog
+  Initial release
