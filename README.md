@@ -9,7 +9,7 @@ Define a topic such as "Top 10 Horror Movies". Every user ranks movies from the 
 - **Topics**: any user can create a topic with a title and a size (number of entries). Only the creator or an administrator can delete it.
 - **Rankings**: each user keeps one ranking per topic, built from movies in the library. A movie can only appear once per list and ranks must be unique.
 - **Comparison**: compare your ranking with any other user's ranking for the same topic. The result lists shared movies with both ranks, movies only in one list, and a similarity score.
-- **Dashboard page**: manage topics, edit your ranking and run comparisons from the plugin page ("Top Lists") in the Jellyfin dashboard.
+- **Dashboard page**: manage topics, edit your ranking and run comparisons from the "Tastemate" page in the Jellyfin dashboard sidebar.
 
 ### Similarity score
 
@@ -40,7 +40,7 @@ dotnet publish Jellyfin.Plugin.Tastemate/Jellyfin.Plugin.Tastemate.csproj -c Rel
 2. Enter the name `Tastemate` and the URL `https://github.com/creadicted/Tastemate/releases/latest/download/manifest.json`.
 3. Go to the Catalog, open Tastemate and click Install.
 4. Restart Jellyfin.
-5. Open Dashboard > Plugins > Tastemate (page "Top Lists") to create topics and rank movies.
+5. Open Tastemate in the dashboard sidebar (under Plugins) to create topics and rank movies.
 
 Updates appear in the Catalog and under My Plugins. The scheduled task "Update Plugins" can install them automatically. A restart is needed after each update.
 
@@ -53,6 +53,20 @@ Updates appear in the Catalog and under My Plugins. The scheduled task "Update P
    - Docker: `<config volume>/plugins/Tastemate/`
 3. Restart Jellyfin.
 
+## Local development
+
+`test/serve.sh` runs Jellyfin in a container with your current build of the plugin. It is a bash script, so run it from WSL (Docker) or Git Bash, not from PowerShell or cmd (from those: `wsl bash test/serve.sh`). It builds with `dotnet`, or with the Windows `dotnet.exe` through WSL, or as a last resort inside the .NET SDK container (which fails behind proxies that inspect TLS).
+
+```shell
+test/serve.sh                              # build, start on http://localhost:8096
+MEDIA_DIR=~/movies test/serve.sh           # also mount movies at /media (read-only)
+test/serve.sh                              # after code changes: rebuild, copy DLL, restart
+test/serve.sh --stop                       # stop, keep Jellyfin data
+test/serve.sh --reset                      # stop and delete all data
+```
+
+On first start complete the Jellyfin setup wizard, add a Movies library pointing at `/media`, then open Dashboard > Plugins > Tastemate. Config and data live in the `tastemate-dev-config` volume and survive restarts. `PORT` and `TAG` env vars change the host port and Jellyfin version.
+
 ## Testing
 
 `test/e2e.sh` runs the plugin end to end against a fresh Jellyfin container (Docker or Podman). It builds the plugin, serves it through a local repository manifest, installs it via the Jellyfin API, restarts the server and exercises the topic endpoints.
@@ -64,11 +78,27 @@ test/e2e.sh 10.11.6  # another image tag
 
 Needs `docker` or `podman`, `dotnet`, `curl` and `python`.
 
+## Continuous integration and releases
+
+- **Test** (`.github/workflows/test.yaml`): on every push to `main` and every pull request, builds the plugin and runs `test/e2e.sh` against a Jellyfin container.
+- **Release** (`.github/workflows/release.yaml`): pushing a tag that starts with `v` builds the plugin, zips the DLL and creates a GitHub release with `tastemate_<version>.zip` and `manifest.json`. The manifest keeps all earlier versions, so the repository URL under Install always serves the latest.
+
+To release:
+
+```shell
+git tag v0.3.0
+git push origin v0.3.0
+```
+
+The tag becomes the plugin version (`v0.3.0` is published as `0.3.0.0`). Versions must increase, and a tag must not be reused. When Jellyfin moves to a new major version, update `targetAbi` in `build.yaml` and `release.yaml` and the `Jellyfin.Controller` and `Jellyfin.Model` package versions in the csproj.
+
 ## Configuration
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `MaxTopSize` | 25 | Maximum number of entries a topic may have. |
+
+There is no UI for this yet. To change it, edit `Jellyfin.Plugin.Tastemate.xml` in the Jellyfin plugin configurations directory (`<config>/plugins/configurations/`) while the server is stopped.
 
 ## API
 

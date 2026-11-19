@@ -46,12 +46,22 @@ esac
 OUT="$ROOT/artifacts/serve"
 rm -rf "$OUT"
 echo "==> Build plugin"
+CSPROJ="Jellyfin.Plugin.Tastemate/Jellyfin.Plugin.Tastemate.csproj"
 if command -v dotnet >/dev/null; then
-  dotnet publish "$ROOT/Jellyfin.Plugin.Tastemate/Jellyfin.Plugin.Tastemate.csproj" -c Debug -o "$OUT" >/dev/null
+  BUILD=(dotnet publish "$ROOT/$CSPROJ" -c Debug -o "$OUT")
+elif command -v dotnet.exe >/dev/null && command -v wslpath >/dev/null; then
+  # WSL without a Linux SDK: use the Windows one through interop
+  BUILD=(dotnet.exe publish "$(wslpath -w "$ROOT/$CSPROJ")" -c Debug -o "$(wslpath -w "$OUT")")
 else
-  # No local SDK (e.g. plain WSL): build in the SDK container
-  "$CLI" run --rm -v "$ROOT:/src" -w /src mcr.microsoft.com/dotnet/sdk:9.0 \
-    dotnet publish Jellyfin.Plugin.Tastemate/Jellyfin.Plugin.Tastemate.csproj -c Debug -o artifacts/serve >/dev/null
+  # No local SDK: build in the SDK container (may fail behind a TLS-inspecting proxy)
+  BUILD=("$CLI" run --rm -v "$ROOT:/src" -w /src mcr.microsoft.com/dotnet/sdk:9.0
+    dotnet publish "$CSPROJ" -c Debug -o artifacts/serve)
+fi
+# MSBuild prints errors on stdout, so keep the output and show it only on failure
+if ! LOG="$("${BUILD[@]}" 2>&1)"; then
+  echo "$LOG" >&2
+  echo "Build failed" >&2
+  exit 1
 fi
 
 echo "==> Start Jellyfin $TAG"
@@ -68,7 +78,16 @@ MEDIA=()
 }
 "$CLI" start "$NAME" >/dev/null
 
-echo "==> Jellyfin starting at http://localhost:$PORT"
+echo "==> Waiting for Jellyfin"
+READY=0
+for _ in $(seq 1 60); do
+  if curl -fs "http://localhost:$PORT/System/Info/Public" >/dev/null; then READY=1; break; fi
+  sleep 2
+done
+[ "$READY" = 1 ] || { echo "Jellyfin did not answer in 2 minutes, see: $CLI logs $NAME" >&2; exit 1; }
+
+echo
+echo "==> Jellyfin is ready: http://localhost:$PORT"
 echo "    Plugin page: Dashboard > Plugins > Tastemate"
 echo "    Logs:        $CLI logs -f $NAME"
 echo "    Stop:        test/serve.sh --stop"
