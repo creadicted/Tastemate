@@ -2,58 +2,123 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Top Lists</title>
+    <title>Tastemate</title>
 </head>
 <body>
-    <div id="TastematePage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select">
+    <div id="TastematePage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button">
+        <style>
+            #TastematePage .tm-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1em; margin-bottom: 1.5em; }
+            #TastematePage .tm-header h2 { margin: 0; }
+            #TastematePage .tm-muted { opacity: .7; }
+            #TastematePage .tm-actions { display: flex; flex-wrap: wrap; gap: .5em; }
+            #TastematePage .tm-btn { cursor: pointer; border: 0; border-radius: .3em; padding: .55em 1.1em; font-size: inherit; color: inherit; background: rgba(255,255,255,.12); }
+            #TastematePage .tm-btn:hover { background: rgba(255,255,255,.2); }
+            #TastematePage .tm-btn.primary { background: #00a4dc; color: #fff; }
+            #TastematePage .tm-btn.primary:hover { background: #33b6e3; }
+            #TastematePage .tm-btn.danger:hover { background: #c0392b; }
+            #TastematePage .tm-btn[disabled] { opacity: .4; cursor: default; }
+            #TastematePage .tm-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(18em, 1fr)); gap: 1em; }
+            #TastematePage .tm-card { background: rgba(255,255,255,.06); border-radius: .5em; padding: 1.1em; display: flex; flex-direction: column; gap: .6em; }
+            #TastematePage .tm-card h3 { margin: 0; }
+            #TastematePage .tm-progress { height: .35em; border-radius: .2em; background: rgba(255,255,255,.12); overflow: hidden; }
+            #TastematePage .tm-progress > div { height: 100%; background: #00a4dc; }
+            #TastematePage .tm-empty { text-align: center; padding: 3em 1em; }
+            #TastematePage .tm-slot { display: flex; align-items: center; gap: .8em; padding: .5em .8em; margin-bottom: .4em; border-radius: .4em; background: rgba(255,255,255,.06); min-height: 4.2em; }
+            #TastematePage .tm-slot.empty { background: none; border: 1px dashed rgba(255,255,255,.2); }
+            #TastematePage .tm-rank { width: 2em; text-align: center; font-size: 1.3em; font-weight: bold; opacity: .8; }
+            #TastematePage .tm-poster { width: 2.8em; height: 4.2em; object-fit: cover; border-radius: .2em; background: rgba(255,255,255,.1); flex: none; }
+            #TastematePage .tm-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            #TastematePage .tm-fill { display: grid; grid-template-columns: repeat(auto-fit, minmax(22em, 1fr)); gap: 2em; align-items: start; }
+            #TastematePage .tm-sim { font-size: 2.4em; font-weight: bold; }
+            #TastematePage .tm-cmp { width: 100%; border-collapse: collapse; margin-bottom: 1.5em; }
+            #TastematePage .tm-cmp th, #TastematePage .tm-cmp td { text-align: left; padding: .5em .6em; border-bottom: 1px solid rgba(255,255,255,.1); }
+            #TastematePage .tm-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(16em, 1fr)); gap: 2em; }
+            #TastematePage .hide { display: none; }
+        </style>
         <div data-role="content">
             <div class="content-primary">
-                <h2>Top Lists</h2>
 
-                <form id="TastemateCreateForm">
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="TcTitle">New topic (e.g. "Top 10 Horror Movies")</label>
-                        <input id="TcTitle" type="text" is="emby-input" maxlength="100" required />
+                <!-- Lists -->
+                <div id="TmListView">
+                    <div class="tm-header">
+                        <h2>Tastemate</h2>
+                        <button type="button" class="tm-btn primary" id="TmNew">+ New list</button>
                     </div>
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="TcSize">Number of entries</label>
-                        <input id="TcSize" type="number" is="emby-input" min="1" max="25" value="10" required />
-                    </div>
-                    <button is="emby-button" type="submit" class="raised button-submit block emby-button"><span>Create topic</span></button>
-                </form>
-
-                <div class="selectContainer">
-                    <label class="selectLabel" for="TcTopic">Topic</label>
-                    <select is="emby-select" id="TcTopic" class="emby-select-withcolor emby-select"></select>
+                    <div id="TmCards" class="tm-cards"></div>
+                    <div id="TmNoLists" class="tm-empty tm-muted hide">No lists yet. Create one, e.g. "Top 10 Horror Movies".</div>
                 </div>
-                <button is="emby-button" id="TcDelete" type="button" class="raised block emby-button hide"><span>Delete topic</span></button>
 
-                <div id="TcEditor" class="hide">
-                    <h3>My ranking</h3>
-                    <ol id="TcMyList"></ol>
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="TcSearch">Search a movie to add</label>
-                        <input id="TcSearch" type="search" is="emby-input" />
+                <!-- Create -->
+                <div id="TmCreateView" class="hide">
+                    <div class="tm-header">
+                        <h2>New list</h2>
+                        <button type="button" class="tm-btn" data-back>Cancel</button>
                     </div>
-                    <ul id="TcResults"></ul>
-                    <button is="emby-button" id="TcSave" type="button" class="raised button-submit block emby-button"><span>Save ranking</span></button>
-
-                    <h3>Compare</h3>
-                    <div class="selectContainer">
-                        <label class="selectLabel" for="TcOther">Compare with</label>
-                        <select is="emby-select" id="TcOther" class="emby-select-withcolor emby-select"></select>
-                    </div>
-                    <button is="emby-button" id="TcCompare" type="button" class="raised block emby-button"><span>Compare</span></button>
-                    <div id="TcCompareResult"></div>
+                    <form id="TmCreateForm">
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="TmTitle">Title (e.g. "Top 10 Horror Movies")</label>
+                            <input id="TmTitle" type="text" is="emby-input" maxlength="100" required />
+                        </div>
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="TmSize">Number of entries</label>
+                            <input id="TmSize" type="number" is="emby-input" min="1" max="25" value="10" required />
+                        </div>
+                        <button type="submit" class="tm-btn primary">Create list</button>
+                    </form>
                 </div>
+
+                <!-- Fill out -->
+                <div id="TmFillView" class="hide">
+                    <div class="tm-header">
+                        <div>
+                            <h2 id="TmFillTitle"></h2>
+                            <div class="tm-muted" id="TmFillSub"></div>
+                        </div>
+                        <div class="tm-actions">
+                            <button type="button" class="tm-btn" data-back>Back</button>
+                            <button type="button" class="tm-btn primary" id="TmSave">Save my list</button>
+                        </div>
+                    </div>
+                    <div class="tm-fill">
+                        <div>
+                            <h3>My list</h3>
+                            <div id="TmSlots"></div>
+                        </div>
+                        <div>
+                            <h3>Add movies</h3>
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="TmSearch">Search your library</label>
+                                <input id="TmSearch" type="search" is="emby-input" />
+                            </div>
+                            <div id="TmResults"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compare -->
+                <div id="TmCompareView" class="hide">
+                    <div class="tm-header">
+                        <div>
+                            <h2 id="TmCmpTitle"></h2>
+                            <div class="tm-muted" id="TmCmpSub"></div>
+                        </div>
+                        <button type="button" class="tm-btn" data-back>Back</button>
+                    </div>
+                    <div class="tm-actions" id="TmCmpUsers" style="margin-bottom:1.5em"></div>
+                    <div id="TmCmpResult"></div>
+                </div>
+
             </div>
         </div>
         <script type="text/javascript">
             (function () {
                 var page = document.querySelector('#TastematePage');
-                var state = { topics: [], topic: null, entries: [] };
+                var me = null;
+                var state = { topics: [], rankers: {}, topic: null, entries: [], dirty: false, isAdmin: false };
+                var views = ['TmListView', 'TmCreateView', 'TmFillView', 'TmCompareView'];
 
                 function $(id) { return page.querySelector(id); }
+                function norm(id) { return String(id || '').replace(/-/g, '').toLowerCase(); }
 
                 function api(method, path, body) {
                     var options = { type: method, url: ApiClient.getUrl('Tastemate/' + path) };
@@ -67,80 +132,162 @@
 
                 function fail(response) {
                     Dashboard.hideLoadingMsg();
-                    var done = function (text) { Dashboard.alert({ title: 'Top Lists', message: text || 'Request failed' }); };
+                    var done = function (text) { Dashboard.alert({ title: 'Tastemate', message: text || 'Request failed' }); };
                     if (response && response.text) { response.text().then(done); } else { done(); }
                 }
 
                 function el(tag, text, className) {
                     var node = document.createElement(tag);
-                    if (text !== undefined) { node.textContent = text; }
+                    if (text !== undefined && text !== null) { node.textContent = text; }
                     if (className) { node.className = className; }
                     return node;
                 }
 
-                function button(label, onClick) {
-                    var b = el('button', label);
+                function btn(label, onClick, className) {
+                    var b = el('button', label, 'tm-btn' + (className ? ' ' + className : ''));
                     b.type = 'button';
                     b.addEventListener('click', onClick);
                     return b;
                 }
 
-                function loadTopics(selectId) {
+                function poster(itemId) {
+                    var img = el('img', undefined, 'tm-poster');
+                    img.loading = 'lazy';
+                    img.alt = '';
+                    img.src = ApiClient.getUrl('Items/' + itemId + '/Images/Primary', { maxHeight: 160, quality: 80 });
+                    img.addEventListener('error', function () { img.style.visibility = 'hidden'; });
+                    return img;
+                }
+
+                function show(view) {
+                    views.forEach(function (v) { $('#' + v).classList.toggle('hide', v !== view); });
+                    window.scrollTo(0, 0);
+                }
+
+                function confirmDiscard() {
+                    return !state.dirty || confirm('You have unsaved changes. Leave without saving?');
+                }
+
+                // ---- Lists view ----
+                function loadLists() {
+                    Dashboard.showLoadingMsg();
                     return api('GET', 'Topics').then(function (topics) {
                         state.topics = topics;
-                        var select = $('#TcTopic');
-                        select.innerHTML = '';
-                        topics.forEach(function (t) {
-                            var option = el('option', t.Title + ' (Top ' + t.Size + ')');
-                            option.value = t.Id;
-                            select.appendChild(option);
-                        });
-                        if (selectId) { select.value = selectId; }
-                        return selectTopic();
+                        return Promise.all(topics.map(function (t) {
+                            return api('GET', 'Topics/' + t.Id + '/Rankings').then(function (r) { state.rankers[t.Id] = r; }, function () { state.rankers[t.Id] = []; });
+                        }));
+                    }).then(function () {
+                        renderLists();
+                        Dashboard.hideLoadingMsg();
+                    }, fail);
+                }
+
+                function myCount(topic) {
+                    var mine = (state.rankers[topic.Id] || []).filter(function (r) { return norm(r.UserId) === me; })[0];
+                    return mine ? mine.EntryCount : 0;
+                }
+
+                function renderLists() {
+                    var cards = $('#TmCards');
+                    cards.innerHTML = '';
+                    $('#TmNoLists').classList.toggle('hide', state.topics.length > 0);
+                    state.topics.forEach(function (t) {
+                        var rankers = state.rankers[t.Id] || [];
+                        var mine = myCount(t);
+                        var others = rankers.filter(function (r) { return norm(r.UserId) !== me && r.EntryCount > 0; }).length;
+                        var card = el('div', undefined, 'tm-card');
+                        card.appendChild(el('h3', t.Title));
+                        card.appendChild(el('div', 'Top ' + t.Size + ' · ' + rankers.length + (rankers.length === 1 ? ' person' : ' people') + ' ranked', 'tm-muted'));
+                        var bar = el('div', undefined, 'tm-progress');
+                        var fill = el('div');
+                        fill.style.width = Math.min(100, Math.round(mine / t.Size * 100)) + '%';
+                        bar.appendChild(fill);
+                        card.appendChild(bar);
+                        card.appendChild(el('div', mine ? 'Your list: ' + mine + ' / ' + t.Size : 'You have not filled this out yet', 'tm-muted'));
+                        var actions = el('div', undefined, 'tm-actions');
+                        actions.appendChild(btn(mine ? 'Edit my list' : 'Fill out', function () { openFill(t); }, 'primary'));
+                        var compare = btn('Compare', function () { openCompare(t); });
+                        if (!mine || !others) { compare.disabled = true; compare.title = !mine ? 'Fill out your list first' : 'Nobody else has ranked this yet'; }
+                        actions.appendChild(compare);
+                        if (norm(t.CreatedByUserId) === me || state.isAdmin) {
+                            actions.appendChild(btn('Delete', function () { removeList(t); }, 'danger'));
+                        }
+                        card.appendChild(actions);
+                        cards.appendChild(card);
                     });
                 }
 
-                function selectTopic() {
-                    var id = $('#TcTopic').value;
-                    state.topic = state.topics.filter(function (t) { return t.Id === id; })[0] || null;
-                    $('#TcEditor').classList.toggle('hide', !state.topic);
-                    $('#TcDelete').classList.toggle('hide', !state.topic);
-                    $('#TcCompareResult').innerHTML = '';
-                    if (!state.topic) { return Promise.resolve(); }
+                function removeList(topic) {
+                    if (!confirm('Delete "' + topic.Title + '" and everyone\'s rankings?')) { return; }
+                    api('DELETE', 'Topics/' + topic.Id).then(loadLists, fail);
+                }
 
+                // ---- Create view ----
+                $('#TmNew').addEventListener('click', function () { $('#TmTitle').value = ''; show('TmCreateView'); });
+
+                $('#TmCreateForm').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    api('POST', 'Topics', { Title: $('#TmTitle').value, Size: parseInt($('#TmSize').value, 10) })
+                        .then(function (topic) {
+                            return loadLists().then(function () {
+                                var created = state.topics.filter(function (t) { return t.Id === topic.Id; })[0] || topic;
+                                openFill(created);
+                            });
+                        }, fail);
+                });
+
+                // ---- Fill out view ----
+                function openFill(topic) {
+                    state.topic = topic;
                     state.entries = [];
-                    var me = ApiClient.getCurrentUserId();
-                    return api('GET', 'Topics/' + id + '/Rankings/' + me)
-                        .then(function (ranking) {
-                            state.entries = ranking.Entries.map(function (e) { return { ItemId: e.ItemId, Name: e.Name }; });
-                        }, function () { /* no ranking yet */ })
-                        .then(function () { renderList(); return loadRankers(); });
-                }
-
-                function loadRankers() {
-                    var me = ApiClient.getCurrentUserId();
-                    return api('GET', 'Topics/' + state.topic.Id + '/Rankings').then(function (rankers) {
-                        var select = $('#TcOther');
-                        select.innerHTML = '';
-                        rankers.filter(function (r) { return r.UserId.replace(/-/g, '') !== me; }).forEach(function (r) {
-                            var option = el('option', r.UserName + ' (' + r.EntryCount + ' movies)');
-                            option.value = r.UserId;
-                            select.appendChild(option);
-                        });
+                    state.dirty = false;
+                    $('#TmFillTitle').textContent = topic.Title;
+                    $('#TmSearch').value = '';
+                    $('#TmResults').innerHTML = '';
+                    Dashboard.showLoadingMsg();
+                    api('GET', 'Topics/' + topic.Id + '/Rankings/' + me).then(function (ranking) {
+                        state.entries = ranking.Entries.map(function (e) { return { ItemId: e.ItemId, Name: e.Name }; });
+                    }, function () { /* no ranking yet */ }).then(function () {
+                        renderSlots();
+                        show('TmFillView');
+                        Dashboard.hideLoadingMsg();
                     });
                 }
 
-                function renderList() {
-                    var list = $('#TcMyList');
-                    list.innerHTML = '';
-                    state.entries.forEach(function (entry, index) {
-                        var li = el('li', entry.Name + ' ');
-                        li.appendChild(button('Up', function () { move(index, -1); }));
-                        li.appendChild(button('Down', function () { move(index, 1); }));
-                        li.appendChild(button('Remove', function () { state.entries.splice(index, 1); renderList(); }));
-                        list.appendChild(li);
-                    });
+                function renderSlots() {
+                    var size = state.topic.Size;
+                    $('#TmFillSub').textContent = 'Top ' + size + ' · ' + state.entries.length + ' / ' + size + ' filled' + (state.dirty ? ' · unsaved changes' : '');
+                    var slots = $('#TmSlots');
+                    slots.innerHTML = '';
+                    for (var i = 0; i < size; i++) {
+                        (function (index) {
+                            var entry = state.entries[index];
+                            var row = el('div', undefined, 'tm-slot' + (entry ? '' : ' empty'));
+                            row.appendChild(el('div', String(index + 1), 'tm-rank'));
+                            if (entry) {
+                                row.appendChild(poster(entry.ItemId));
+                                row.appendChild(el('div', entry.Name, 'tm-name'));
+                                var up = btn('↑', function () { move(index, -1); });
+                                var down = btn('↓', function () { move(index, 1); });
+                                up.disabled = index === 0;
+                                down.disabled = index === state.entries.length - 1;
+                                up.title = 'Move up';
+                                down.title = 'Move down';
+                                row.appendChild(up);
+                                row.appendChild(down);
+                                var rm = btn('✕', function () { state.entries.splice(index, 1); touch(); }, 'danger');
+                                rm.title = 'Remove';
+                                row.appendChild(rm);
+                            } else {
+                                row.appendChild(el('div', 'Empty', 'tm-name tm-muted'));
+                            }
+                            slots.appendChild(row);
+                        })(i);
+                    }
                 }
+
+                function touch() { state.dirty = true; renderSlots(); }
 
                 function move(index, delta) {
                     var target = index + delta;
@@ -148,87 +295,130 @@
                     var tmp = state.entries[index];
                     state.entries[index] = state.entries[target];
                     state.entries[target] = tmp;
-                    renderList();
+                    touch();
                 }
+
+                var searchTimer = null;
+                $('#TmSearch').addEventListener('input', function () {
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(search, 250);
+                });
 
                 function search() {
-                    var term = $('#TcSearch').value.trim();
-                    var results = $('#TcResults');
+                    var term = $('#TmSearch').value.trim();
+                    var results = $('#TmResults');
                     results.innerHTML = '';
                     if (!term) { return; }
-                    ApiClient.getItems(ApiClient.getCurrentUserId(), {
-                        IncludeItemTypes: 'Movie', Recursive: true, SearchTerm: term, Limit: 10, SortBy: 'SortName'
-                    }).then(function (result) {
+                    ApiClient.getItems(me, { IncludeItemTypes: 'Movie', Recursive: true, SearchTerm: term, Limit: 12, SortBy: 'SortName' }).then(function (result) {
+                        if (!result.Items.length) { results.appendChild(el('div', 'No movies found.', 'tm-muted')); }
                         result.Items.forEach(function (item) {
-                            var li = el('li', item.Name + (item.ProductionYear ? ' (' + item.ProductionYear + ') ' : ' '));
-                            li.appendChild(button('Add', function () {
+                            var row = el('div', undefined, 'tm-slot');
+                            row.appendChild(poster(item.Id));
+                            row.appendChild(el('div', item.Name + (item.ProductionYear ? ' (' + item.ProductionYear + ')' : ''), 'tm-name'));
+                            var inList = state.entries.some(function (e) { return norm(e.ItemId) === norm(item.Id); });
+                            var add = btn(inList ? 'Added' : 'Add', function () {
                                 if (state.entries.length >= state.topic.Size) {
-                                    Dashboard.alert({ title: 'Top Lists', message: 'List is full (' + state.topic.Size + ').' });
-                                } else if (!state.entries.some(function (e) { return e.ItemId === item.Id; })) {
-                                    state.entries.push({ ItemId: item.Id, Name: item.Name });
-                                    renderList();
+                                    Dashboard.alert({ title: 'Tastemate', message: 'Your list is full (' + state.topic.Size + '). Remove a movie first.' });
+                                    return;
                                 }
-                            }));
-                            results.appendChild(li);
-                        });
-                    });
-                }
-
-                function save() {
-                    Dashboard.showLoadingMsg();
-                    var entries = state.entries.map(function (e, i) { return { Rank: i + 1, ItemId: e.ItemId }; });
-                    api('PUT', 'Topics/' + state.topic.Id + '/Ranking', { Entries: entries }).then(function () {
-                        return loadRankers();
-                    }).then(function () { Dashboard.hideLoadingMsg(); }, fail);
-                }
-
-                function compare() {
-                    var other = $('#TcOther').value;
-                    var out = $('#TcCompareResult');
-                    out.innerHTML = '';
-                    if (!other) { return; }
-                    api('GET', 'Topics/' + state.topic.Id + '/Compare/' + other).then(function (r) {
-                        var res = r.Result;
-                        out.appendChild(el('p', 'Similarity with ' + r.UserBName + ': ' + res.Similarity + '%'));
-                        var table = el('table');
-                        var head = el('tr');
-                        ['Movie', r.UserAName, r.UserBName, 'Diff'].forEach(function (h) { head.appendChild(el('th', h)); });
-                        table.appendChild(head);
-                        res.Shared.forEach(function (s) {
-                            var row = el('tr');
-                            [r.Names[s.ItemId], '#' + s.RankA, '#' + s.RankB, s.Difference].forEach(function (c) { row.appendChild(el('td', String(c))); });
-                            table.appendChild(row);
-                        });
-                        out.appendChild(table);
-                        [['Only in ' + r.UserAName, res.OnlyInA], ['Only in ' + r.UserBName, res.OnlyInB]].forEach(function (group) {
-                            out.appendChild(el('h4', group[0]));
-                            var ul = el('ul');
-                            group[1].forEach(function (e) { ul.appendChild(el('li', '#' + e.Rank + ' ' + r.Names[e.ItemId])); });
-                            out.appendChild(ul);
+                                state.entries.push({ ItemId: item.Id, Name: item.Name });
+                                add.textContent = 'Added';
+                                add.disabled = true;
+                                touch();
+                            }, 'primary');
+                            add.disabled = inList;
+                            row.appendChild(add);
+                            results.appendChild(row);
                         });
                     }, fail);
                 }
 
+                $('#TmSave').addEventListener('click', function () {
+                    Dashboard.showLoadingMsg();
+                    var entries = state.entries.map(function (e, i) { return { Rank: i + 1, ItemId: e.ItemId }; });
+                    api('PUT', 'Topics/' + state.topic.Id + '/Ranking', { Entries: entries }).then(function () {
+                        state.dirty = false;
+                        return loadLists();
+                    }).then(function () { show('TmListView'); }, fail);
+                });
+
+                // ---- Compare view ----
+                function openCompare(topic) {
+                    state.topic = topic;
+                    $('#TmCmpTitle').textContent = topic.Title;
+                    $('#TmCmpSub').textContent = 'Pick someone to compare your list with';
+                    $('#TmCmpResult').innerHTML = '';
+                    var users = $('#TmCmpUsers');
+                    users.innerHTML = '';
+                    (state.rankers[topic.Id] || []).filter(function (r) { return norm(r.UserId) !== me && r.EntryCount > 0; }).forEach(function (r) {
+                        users.appendChild(btn(r.UserName + ' (' + r.EntryCount + ')', function () { compare(r.UserId); }));
+                    });
+                    show('TmCompareView');
+                }
+
+                function compare(otherId) {
+                    var out = $('#TmCmpResult');
+                    out.innerHTML = '';
+                    Dashboard.showLoadingMsg();
+                    api('GET', 'Topics/' + state.topic.Id + '/Compare/' + otherId).then(function (r) {
+                        Dashboard.hideLoadingMsg();
+                        var res = r.Result;
+                        $('#TmCmpSub').textContent = 'You vs ' + r.UserBName;
+                        out.appendChild(el('div', res.Similarity + '% similar', 'tm-sim'));
+                        out.appendChild(el('p', res.Shared.length + ' movie' + (res.Shared.length === 1 ? '' : 's') + ' in common', 'tm-muted'));
+
+                        if (res.Shared.length) {
+                            var table = el('table', undefined, 'tm-cmp');
+                            var head = el('tr');
+                            ['', 'Movie', 'You', r.UserBName, 'Gap'].forEach(function (h) { head.appendChild(el('th', h)); });
+                            table.appendChild(head);
+                            res.Shared.forEach(function (s) {
+                                var row = el('tr');
+                                var cell = el('td');
+                                cell.appendChild(poster(s.ItemId));
+                                row.appendChild(cell);
+                                [r.Names[s.ItemId], '#' + s.RankA, '#' + s.RankB, s.Difference === 0 ? 'same' : String(s.Difference)].forEach(function (c) {
+                                    row.appendChild(el('td', c));
+                                });
+                                table.appendChild(row);
+                            });
+                            out.appendChild(table);
+                        }
+
+                        var cols = el('div', undefined, 'tm-cols');
+                        [['Only on your list', res.OnlyInA], ['Only on ' + r.UserBName + '\'s list', res.OnlyInB]].forEach(function (group) {
+                            var col = el('div');
+                            col.appendChild(el('h3', group[0]));
+                            if (!group[1].length) { col.appendChild(el('div', 'Nothing', 'tm-muted')); }
+                            group[1].forEach(function (e) {
+                                var row = el('div', undefined, 'tm-slot');
+                                row.appendChild(el('div', String(e.Rank), 'tm-rank'));
+                                row.appendChild(poster(e.ItemId));
+                                row.appendChild(el('div', r.Names[e.ItemId], 'tm-name'));
+                                col.appendChild(row);
+                            });
+                            cols.appendChild(col);
+                        });
+                        out.appendChild(cols);
+                    }, fail);
+                }
+
+                // ---- Navigation ----
+                page.querySelectorAll('[data-back]').forEach(function (b) {
+                    b.addEventListener('click', function () {
+                        if (!confirmDiscard()) { return; }
+                        state.dirty = false;
+                        show('TmListView');
+                    });
+                });
+
                 page.addEventListener('pageshow', function () {
-                    Dashboard.showLoadingMsg();
-                    loadTopics().then(function () { Dashboard.hideLoadingMsg(); }, fail);
-                });
-
-                $('#TastemateCreateForm').addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    Dashboard.showLoadingMsg();
-                    api('POST', 'Topics', { Title: $('#TcTitle').value, Size: parseInt($('#TcSize').value, 10) })
-                        .then(function (topic) { $('#TcTitle').value = ''; return loadTopics(topic.Id); })
-                        .then(function () { Dashboard.hideLoadingMsg(); }, fail);
-                });
-
-                $('#TcTopic').addEventListener('change', selectTopic);
-                $('#TcSearch').addEventListener('input', search);
-                $('#TcSave').addEventListener('click', save);
-                $('#TcCompare').addEventListener('click', compare);
-                $('#TcDelete').addEventListener('click', function () {
-                    if (!confirm('Delete this topic and all rankings?')) { return; }
-                    api('DELETE', 'Topics/' + state.topic.Id).then(function () { return loadTopics(); }, fail);
+                    me = norm(ApiClient.getCurrentUserId());
+                    show('TmListView');
+                    ApiClient.getCurrentUser().then(function (user) {
+                        state.isAdmin = !!(user && user.Policy && user.Policy.IsAdministrator);
+                        return loadLists();
+                    }, fail);
                 });
             })();
         </script>

@@ -44,7 +44,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             new PluginPageInfo
             {
                 Name = Name,
-                DisplayName = "Top Lists",
+                DisplayName = "Tastemate",
                 MenuSection = "server",
                 MenuIcon = "format_list_numbered",
                 EnableInMainMenu = true,
