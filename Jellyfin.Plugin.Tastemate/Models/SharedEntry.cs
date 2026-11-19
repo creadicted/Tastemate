@@ -21,6 +21,16 @@ public class SharedEntry
     public int RankB { get; set; }
 
     /// <summary>
+    /// Gets or sets the reason given in the first list.
+    /// </summary>
+    public string? ReasonA { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reason given in the second list.
+    /// </summary>
+    public string? ReasonB { get; set; }
+
+    /// <summary>
     /// Gets or sets the absolute rank difference.
     /// </summary>
     public int Difference { get; set; }

@@ -39,6 +39,11 @@ public class RankingEntry
     public string? Poster { get; set; }
 
     /// <summary>
+    /// Gets or sets the user's short reason why this movie is in the list.
+    /// </summary>
+    public string? Reason { get; set; }
+
+    /// <summary>
     /// Gets the key used to match the same movie across users and sources.
     /// </summary>
     public string Key => string.IsNullOrEmpty(TmdbId)

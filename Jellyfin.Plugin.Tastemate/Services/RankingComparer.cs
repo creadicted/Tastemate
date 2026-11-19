@@ -22,6 +22,7 @@ public static class RankingComparer
     {
         var ranksA = a.Entries.ToDictionary(e => e.Key, e => e.Rank);
         var ranksB = b.Entries.ToDictionary(e => e.Key, e => e.Rank);
+        var reasonsB = b.Entries.ToDictionary(e => e.Key, e => e.Reason);
 
         var shared = a.Entries
             .Where(e => ranksB.ContainsKey(e.Key))
@@ -31,6 +32,8 @@ public static class RankingComparer
                 Key = e.Key,
                 RankA = e.Rank,
                 RankB = ranksB[e.Key],
+                ReasonA = e.Reason,
+                ReasonB = reasonsB[e.Key],
                 Difference = Math.Abs(e.Rank - ranksB[e.Key])
             })
             .ToList();

@@ -8,6 +8,7 @@ Define a topic such as "Top 10 Horror Movies". Every user ranks movies from the 
 
 - **Topics**: any user can create a topic with a title and a size (number of entries). Only the creator or an administrator can delete it.
 - **Rankings**: each user keeps one ranking per topic. A movie can only appear once per list and ranks must be unique.
+- **Reasons**: add a short reason (up to 280 characters) to any entry to say why it is in your top list. Reasons are shown to the other user when you compare.
 - **Movies outside your library**: search finds movies in your library and, through Jellyfin's built-in TMDb metadata provider, any other movie. Movies that are not in the library can still be ranked, with the poster from TMDb.
 - **Comparison**: compare your ranking with any other user's ranking for the same topic. The result lists shared movies with both ranks, movies only in one list, and a similarity score.
 - **Dashboard page**: manage topics, edit your ranking and run comparisons from the "Tastemate" page in the Jellyfin dashboard sidebar.
@@ -113,7 +114,7 @@ All endpoints require an authenticated user and live under `/Tastemate`.
 | DELETE | `/Tastemate/Topics/{topicId}` | Delete a topic (creator or administrator). |
 | GET | `/Tastemate/Topics/{topicId}/Rankings` | List users who ranked the topic. |
 | GET | `/Tastemate/Topics/{topicId}/Rankings/{userId}` | Get a user's ranking. |
-| PUT | `/Tastemate/Topics/{topicId}/Ranking` | Replace the caller's ranking. Each entry has `Rank` and either `ItemId` (library movie) or `TmdbId`, `Title`, optional `Year` and `Poster` (a `https://image.tmdb.org/` address). |
+| PUT | `/Tastemate/Topics/{topicId}/Ranking` | Replace the caller's ranking. Each entry has `Rank`, an optional `Reason`, and either `ItemId` (library movie) or `TmdbId`, `Title`, optional `Year` and `Poster` (a `https://image.tmdb.org/` address). |
 | GET | `/Tastemate/Search?query=&year=` | Search movies with the server's metadata providers. Returns `TmdbId`, `Name`, `Year`, `Poster`. |
 | GET | `/Tastemate/Topics/{topicId}/Compare/{otherUserId}` | Compare the caller with another user. |
 

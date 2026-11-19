@@ -11,4 +11,5 @@ namespace Jellyfin.Plugin.Tastemate.Api;
 /// <param name="Name">The movie name.</param>
 /// <param name="Year">The production year.</param>
 /// <param name="Poster">The poster image address of an external movie.</param>
-public record RankedEntryDto(int Rank, Guid ItemId, string? TmdbId, string Name, int? Year, string? Poster);
+/// <param name="Reason">The user's reason for ranking the movie.</param>
+public record RankedEntryDto(int Rank, Guid ItemId, string? TmdbId, string Name, int? Year, string? Poster, string? Reason);

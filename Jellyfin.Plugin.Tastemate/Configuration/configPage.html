@@ -25,6 +25,8 @@
             #TastematePage .tm-empty { text-align: center; padding: 3em 1em; }
             #TastematePage .tm-slot { display: flex; align-items: center; gap: .8em; padding: .5em .8em; margin-bottom: .4em; border-radius: .4em; background: rgba(255,255,255,.06); min-height: 4.2em; }
             #TastematePage .tm-slot.empty { background: none; border: 1px dashed rgba(255,255,255,.2); }
+            #TastematePage .tm-reason { width: 100%; margin-top: .3em; padding: .35em .6em; border: 0; border-bottom: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.05); color: inherit; font-size: .9em; box-sizing: border-box; }
+            #TastematePage .tm-quote { font-style: italic; opacity: .8; font-size: .9em; white-space: normal; }
             #TastematePage .tm-rank { width: 2em; text-align: center; font-size: 1.3em; font-weight: bold; opacity: .8; }
             #TastematePage .tm-poster { width: 2.8em; height: 4.2em; object-fit: cover; border-radius: .2em; background: rgba(255,255,255,.1); flex: none; }
             #TastematePage .tm-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -256,7 +258,7 @@
                     Dashboard.showLoadingMsg();
                     api('GET', 'Topics/' + topic.Id + '/Rankings/' + me).then(function (ranking) {
                         state.entries = ranking.Entries.map(function (e) {
-                            return { ItemId: isLibrary(e.ItemId) ? e.ItemId : null, TmdbId: e.TmdbId, Name: e.Name, Year: e.Year, Poster: e.Poster };
+                            return { ItemId: isLibrary(e.ItemId) ? e.ItemId : null, TmdbId: e.TmdbId, Name: e.Name, Year: e.Year, Poster: e.Poster, Reason: e.Reason || '' };
                         });
                     }, function () { /* no ranking yet */ }).then(function () {
                         renderSlots();
@@ -265,9 +267,14 @@
                     });
                 }
 
-                function renderSlots() {
+                function renderHeader() {
                     var size = state.topic.Size;
                     $('#TmFillSub').textContent = 'Top ' + size + ' · ' + state.entries.length + ' / ' + size + ' filled' + (state.dirty ? ' · unsaved changes' : '');
+                }
+
+                function renderSlots() {
+                    var size = state.topic.Size;
+                    renderHeader();
                     var slots = $('#TmSlots');
                     slots.innerHTML = '';
                     for (var i = 0; i < size; i++) {
@@ -277,7 +284,20 @@
                             row.appendChild(el('div', String(index + 1), 'tm-rank'));
                             if (entry) {
                                 row.appendChild(poster(entry));
-                                row.appendChild(el('div', entry.Name + (entry.Year ? ' (' + entry.Year + ')' : '') + (entry.ItemId ? '' : ' · not in library'), 'tm-name'));
+                                var info = el('div', undefined, 'tm-name');
+                                info.style.whiteSpace = 'normal';
+                                info.appendChild(el('div', entry.Name + (entry.Year ? ' (' + entry.Year + ')' : '') + (entry.ItemId ? '' : ' · not in library')));
+                                var reason = el('input', undefined, 'tm-reason');
+                                reason.type = 'text';
+                                reason.maxLength = 280;
+                                reason.placeholder = 'Why is this #' + (index + 1) + '? (optional)';
+                                reason.value = entry.Reason || '';
+                                reason.addEventListener('input', function () {
+                                    entry.Reason = reason.value;
+                                    if (!state.dirty) { state.dirty = true; renderHeader(); }
+                                });
+                                info.appendChild(reason);
+                                row.appendChild(info);
                                 var up = btn('↑', function () { move(index, -1); });
                                 var down = btn('↓', function () { move(index, 1); });
                                 up.disabled = index === 0;
@@ -400,7 +420,7 @@
                 $('#TmSave').addEventListener('click', function () {
                     Dashboard.showLoadingMsg();
                     var entries = state.entries.map(function (e, i) {
-                        var entry = { Rank: i + 1, TmdbId: e.TmdbId || null, Title: e.Name, Year: e.Year || null, Poster: e.Poster || null };
+                        var entry = { Rank: i + 1, TmdbId: e.TmdbId || null, Title: e.Name, Year: e.Year || null, Poster: e.Poster || null, Reason: (e.Reason || '').trim() || null };
                         if (e.ItemId) { entry.ItemId = e.ItemId; }
                         return entry;
                     });
@@ -446,8 +466,13 @@
                                 var movie = r.Movies[s.Key];
                                 cell.appendChild(poster(movie));
                                 row.appendChild(cell);
-                                [movie.Name + (movie.Year ? ' (' + movie.Year + ')' : ''), '#' + s.RankA, '#' + s.RankB, s.Difference === 0 ? 'same' : String(s.Difference)].forEach(function (c) {
-                                    row.appendChild(el('td', c));
+                                [[movie.Name + (movie.Year ? ' (' + movie.Year + ')' : ''), null],
+                                    ['#' + s.RankA, s.ReasonA],
+                                    ['#' + s.RankB, s.ReasonB],
+                                    [s.Difference === 0 ? 'same' : String(s.Difference), null]].forEach(function (c) {
+                                    var td = el('td', c[0]);
+                                    if (c[1]) { td.appendChild(el('div', '\u201c' + c[1] + '\u201d', 'tm-quote')); }
+                                    row.appendChild(td);
                                 });
                                 table.appendChild(row);
                             });
@@ -464,7 +489,11 @@
                                 row.appendChild(el('div', String(e.Rank), 'tm-rank'));
                                 var movie = r.Movies[e.Key];
                                 row.appendChild(poster(movie));
-                                row.appendChild(el('div', movie.Name + (movie.Year ? ' (' + movie.Year + ')' : ''), 'tm-name'));
+                                var label = el('div', undefined, 'tm-name');
+                                label.style.whiteSpace = 'normal';
+                                label.appendChild(el('div', movie.Name + (movie.Year ? ' (' + movie.Year + ')' : '')));
+                                if (e.Reason) { label.appendChild(el('div', '\u201c' + e.Reason + '\u201d', 'tm-quote')); }
+                                row.appendChild(label);
                                 col.appendChild(row);
                             });
                             cols.appendChild(col);

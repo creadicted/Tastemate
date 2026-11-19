@@ -27,6 +27,7 @@ public class TastemateController : ControllerBase
     private const string UserIdClaim = "Jellyfin-UserId";
     private const int MaxTitleLength = 100;
     private const int MaxMovieTitleLength = 200;
+    private const int MaxReasonLength = 280;
     private const string PosterPrefix = "https://image.tmdb.org/";
 
     private readonly TopStore _store;
@@ -282,6 +283,11 @@ public class TastemateController : ControllerBase
 
     private static string? Validate(RankingEntry entry)
     {
+        if (entry.Reason is { Length: > MaxReasonLength })
+        {
+            return $"Reason must be at most {MaxReasonLength} characters.";
+        }
+
         if (entry.ItemId != Guid.Empty)
         {
             return null;
@@ -326,9 +332,19 @@ public class TastemateController : ControllerBase
     /// </summary>
     private RankingEntry Resolve(RankingEntry entry)
     {
+        var reason = string.IsNullOrWhiteSpace(entry.Reason) ? null : entry.Reason.Trim();
         if (entry.ItemId == Guid.Empty || _libraryManager.GetItemById(entry.ItemId) is not Movie movie)
         {
-            return entry;
+            return new RankingEntry
+            {
+                Rank = entry.Rank,
+                ItemId = entry.ItemId,
+                TmdbId = entry.TmdbId,
+                Title = entry.Title,
+                Year = entry.Year,
+                Poster = entry.Poster,
+                Reason = reason
+            };
         }
 
         return new RankingEntry
@@ -338,7 +354,8 @@ public class TastemateController : ControllerBase
             TmdbId = movie.GetProviderId(MediaBrowser.Model.Entities.MetadataProvider.Tmdb) ?? entry.TmdbId,
             Title = movie.Name,
             Year = movie.ProductionYear ?? entry.Year,
-            Poster = entry.Poster
+            Poster = entry.Poster,
+            Reason = reason
         };
     }
 
@@ -354,6 +371,6 @@ public class TastemateController : ControllerBase
     private RankedEntryDto ToDto(RankingEntry stored)
     {
         var entry = Resolve(stored);
-        return new RankedEntryDto(entry.Rank, entry.ItemId, entry.TmdbId, entry.Title ?? "Unknown movie", entry.Year, entry.Poster);
+        return new RankedEntryDto(entry.Rank, entry.ItemId, entry.TmdbId, entry.Title ?? "Unknown movie", entry.Year, entry.Poster, entry.Reason);
     }
 }
