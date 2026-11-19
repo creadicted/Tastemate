@@ -3,23 +3,23 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.TopCompare.Models;
-using Jellyfin.Plugin.TopCompare.Services;
+using Jellyfin.Plugin.Tastemate.Models;
+using Jellyfin.Plugin.Tastemate.Services;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Jellyfin.Plugin.TopCompare.Api;
+namespace Jellyfin.Plugin.Tastemate.Api;
 
 /// <summary>
 /// REST API for topics, rankings and comparisons.
 /// </summary>
 [ApiController]
 [Authorize]
-[Route("TopCompare")]
+[Route("Tastemate")]
 [Produces(MediaTypeNames.Application.Json)]
-public class TopCompareController : ControllerBase
+public class TastemateController : ControllerBase
 {
     private const string UserIdClaim = "Jellyfin-UserId";
     private const int MaxTitleLength = 100;
@@ -29,12 +29,12 @@ public class TopCompareController : ControllerBase
     private readonly IUserManager _userManager;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="TopCompareController"/> class.
+    /// Initializes a new instance of the <see cref="TastemateController"/> class.
     /// </summary>
     /// <param name="store">Instance of the <see cref="TopStore"/> class.</param>
     /// <param name="libraryManager">Instance of the <see cref="ILibraryManager"/> interface.</param>
     /// <param name="userManager">Instance of the <see cref="IUserManager"/> interface.</param>
-    public TopCompareController(TopStore store, ILibraryManager libraryManager, IUserManager userManager)
+    public TastemateController(TopStore store, ILibraryManager libraryManager, IUserManager userManager)
     {
         _store = store;
         _libraryManager = libraryManager;

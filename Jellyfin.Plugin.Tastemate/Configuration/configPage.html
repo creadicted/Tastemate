@@ -5,12 +5,12 @@
     <title>Top Lists</title>
 </head>
 <body>
-    <div id="TopComparePage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select">
+    <div id="TastematePage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select">
         <div data-role="content">
             <div class="content-primary">
                 <h2>Top Lists</h2>
 
-                <form id="TopCompareCreateForm">
+                <form id="TastemateCreateForm">
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="TcTitle">New topic (e.g. "Top 10 Horror Movies")</label>
                         <input id="TcTitle" type="text" is="emby-input" maxlength="100" required />
@@ -50,13 +50,13 @@
         </div>
         <script type="text/javascript">
             (function () {
-                var page = document.querySelector('#TopComparePage');
+                var page = document.querySelector('#TastematePage');
                 var state = { topics: [], topic: null, entries: [] };
 
                 function $(id) { return page.querySelector(id); }
 
                 function api(method, path, body) {
-                    var options = { type: method, url: ApiClient.getUrl('TopCompare/' + path) };
+                    var options = { type: method, url: ApiClient.getUrl('Tastemate/' + path) };
                     if (body !== undefined) {
                         options.data = JSON.stringify(body);
                         options.contentType = 'application/json';
@@ -214,7 +214,7 @@
                     loadTopics().then(function () { Dashboard.hideLoadingMsg(); }, fail);
                 });
 
-                $('#TopCompareCreateForm').addEventListener('submit', function (e) {
+                $('#TastemateCreateForm').addEventListener('submit', function (e) {
                     e.preventDefault();
                     Dashboard.showLoadingMsg();
                     api('POST', 'Topics', { Title: $('#TcTitle').value, Size: parseInt($('#TcSize').value, 10) })

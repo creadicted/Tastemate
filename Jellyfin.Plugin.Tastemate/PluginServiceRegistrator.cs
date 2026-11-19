@@ -1,9 +1,9 @@
-using Jellyfin.Plugin.TopCompare.Services;
+using Jellyfin.Plugin.Tastemate.Services;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Jellyfin.Plugin.TopCompare;
+namespace Jellyfin.Plugin.Tastemate;
 
 /// <summary>
 /// Registers the plugin's services.

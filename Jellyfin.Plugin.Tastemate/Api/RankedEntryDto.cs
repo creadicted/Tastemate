@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Jellyfin.Plugin.TopCompare.Models;
+using Jellyfin.Plugin.Tastemate.Models;
 
-namespace Jellyfin.Plugin.TopCompare.Api;
+namespace Jellyfin.Plugin.Tastemate.Api;
 
 /// <summary>
 /// A ranked movie with display data.

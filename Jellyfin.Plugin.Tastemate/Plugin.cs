@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Jellyfin.Plugin.TopCompare.Configuration;
+using Jellyfin.Plugin.Tastemate.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 
-namespace Jellyfin.Plugin.TopCompare;
+namespace Jellyfin.Plugin.Tastemate;
 
 /// <summary>
 /// The main plugin.
@@ -26,7 +26,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     }
 
     /// <inheritdoc />
-    public override string Name => "TopCompare";
+    public override string Name => "Tastemate";
 
     /// <inheritdoc />
     public override Guid Id => Guid.Parse("0f930e3f-2977-4737-ac6f-65e6d9a4cc6d");

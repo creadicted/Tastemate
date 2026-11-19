@@ -1,6 +1,6 @@
 using MediaBrowser.Model.Plugins;
 
-namespace Jellyfin.Plugin.TopCompare.Configuration;
+namespace Jellyfin.Plugin.Tastemate.Configuration;
 
 /// <summary>
 /// Plugin configuration.

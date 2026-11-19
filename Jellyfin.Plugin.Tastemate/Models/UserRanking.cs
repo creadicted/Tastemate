@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Jellyfin.Plugin.TopCompare.Models;
+namespace Jellyfin.Plugin.Tastemate.Models;
 
 /// <summary>
 /// A user's ranking for a topic.

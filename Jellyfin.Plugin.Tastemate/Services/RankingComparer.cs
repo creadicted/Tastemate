@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
-using Jellyfin.Plugin.TopCompare.Models;
+using Jellyfin.Plugin.Tastemate.Models;
 
-namespace Jellyfin.Plugin.TopCompare.Services;
+namespace Jellyfin.Plugin.Tastemate.Services;
 
 /// <summary>
 /// Compares two rankings.

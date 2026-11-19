@@ -5,10 +5,10 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.TopCompare.Models;
+using Jellyfin.Plugin.Tastemate.Models;
 using MediaBrowser.Common.Configuration;
 
-namespace Jellyfin.Plugin.TopCompare.Services;
+namespace Jellyfin.Plugin.Tastemate.Services;
 
 /// <summary>
 /// Persists topics and rankings in a JSON file.
@@ -19,7 +19,7 @@ public sealed class TopStore : IDisposable
 
     private readonly string _filePath;
     private readonly SemaphoreSlim _lock = new(1, 1);
-    private TopCompareData? _data;
+    private TastemateData? _data;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TopStore"/> class.
@@ -27,7 +27,7 @@ public sealed class TopStore : IDisposable
     /// <param name="applicationPaths">Instance of the <see cref="IApplicationPaths"/> interface.</param>
     public TopStore(IApplicationPaths applicationPaths)
     {
-        _filePath = Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellyfin.Plugin.TopCompare.data.json");
+        _filePath = Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellyfin.Plugin.Tastemate.data.json");
     }
 
     /// <summary>
@@ -139,7 +139,7 @@ public sealed class TopStore : IDisposable
         _lock.Dispose();
     }
 
-    private async Task<T> ReadAsync<T>(Func<TopCompareData, T> read)
+    private async Task<T> ReadAsync<T>(Func<TastemateData, T> read)
     {
         await _lock.WaitAsync().ConfigureAwait(false);
         try
@@ -152,7 +152,7 @@ public sealed class TopStore : IDisposable
         }
     }
 
-    private async Task WriteAsync(Action<TopCompareData> write)
+    private async Task WriteAsync(Action<TastemateData> write)
     {
         await _lock.WaitAsync().ConfigureAwait(false);
         try
@@ -171,7 +171,7 @@ public sealed class TopStore : IDisposable
         }
     }
 
-    private async Task<TopCompareData> LoadAsync()
+    private async Task<TastemateData> LoadAsync()
     {
         if (_data is not null)
         {
@@ -181,9 +181,9 @@ public sealed class TopStore : IDisposable
         if (File.Exists(_filePath))
         {
             var json = await File.ReadAllTextAsync(_filePath).ConfigureAwait(false);
-            _data = JsonSerializer.Deserialize<TopCompareData>(json);
+            _data = JsonSerializer.Deserialize<TastemateData>(json);
         }
 
-        return _data ??= new TopCompareData();
+        return _data ??= new TastemateData();
     }
 }

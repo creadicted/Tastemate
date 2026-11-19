@@ -1,6 +1,6 @@
 using System;
 
-namespace Jellyfin.Plugin.TopCompare.Models;
+namespace Jellyfin.Plugin.Tastemate.Models;
 
 /// <summary>
 /// A movie present in both compared lists.

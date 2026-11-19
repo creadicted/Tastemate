@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Jellyfin.Plugin.TopCompare.Models;
+namespace Jellyfin.Plugin.Tastemate.Models;
 
 /// <summary>
 /// The result of comparing two rankings.

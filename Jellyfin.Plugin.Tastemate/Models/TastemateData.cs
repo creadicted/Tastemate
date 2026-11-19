@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 
-namespace Jellyfin.Plugin.TopCompare.Models;
+namespace Jellyfin.Plugin.Tastemate.Models;
 
 /// <summary>
 /// Everything the plugin persists.
 /// </summary>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1002", Justification = "Persistence model")]
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2227", Justification = "Persistence model")]
-public class TopCompareData
+public class TastemateData
 {
     /// <summary>
     /// Gets or sets all topics.

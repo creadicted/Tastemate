@@ -1,6 +1,6 @@
 using System;
 
-namespace Jellyfin.Plugin.TopCompare.Models;
+namespace Jellyfin.Plugin.Tastemate.Models;
 
 /// <summary>
 /// A topic users can rank movies for, e.g. "Top 10 Horror Movies".
