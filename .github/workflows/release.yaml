@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Set version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          # Jellyfin wants four-part versions
+          while [ "$(echo "$tag" | tr -cd . | wc -c)" -lt 3 ]; do tag="$tag.0"; done
+          echo "VERSION=$tag" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: >
+          dotnet publish Jellyfin.Plugin.Tastemate/Jellyfin.Plugin.Tastemate.csproj
+          -c Release -o out
+          -p:Version=$VERSION -p:AssemblyVersion=$VERSION -p:FileVersion=$VERSION
+
+      - name: Package
+        run: |
+          zip -j "tastemate_$VERSION.zip" out/Jellyfin.Plugin.Tastemate.dll
+          echo "CHECKSUM=$(md5sum "tastemate_$VERSION.zip" | cut -d' ' -f1)" >> "$GITHUB_ENV"
+
+      - name: Update manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          repo="$GITHUB_REPOSITORY"
+          gh release download --repo "$repo" --pattern manifest.json --output previous.json || echo '[]' > previous.json
+          jq -n \
+            --slurpfile prev previous.json \
+            --arg version "$VERSION" \
+            --arg checksum "$CHECKSUM" \
+            --arg url "https://github.com/$repo/releases/download/$GITHUB_REF_NAME/tastemate_$VERSION.zip" \
+            --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg changelog "Release $GITHUB_REF_NAME" \
+            '[{
+              guid: "0f930e3f-2977-4737-ac6f-65e6d9a4cc6d",
+              name: "Tastemate",
+              description: "Define topics such as Top 10 Horror Movies. Every user ranks movies from the library for a topic and can compare their list with another user.",
+              overview: "Create Top X movie lists per topic and compare rankings between users",
+              owner: "creadicted",
+              category: "General",
+              versions: ([{
+                version: $version,
+                changelog: $changelog,
+                targetAbi: "10.11.0.0",
+                sourceUrl: $url,
+                checksum: $checksum,
+                timestamp: $ts
+              }] + (($prev[0][0].versions // []) | map(select(.version != $version))))
+            }]' > manifest.json
+          cat manifest.json
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$GITHUB_REF_NAME"
+          "tastemate_$VERSION.zip" manifest.json
+          --title "$GITHUB_REF_NAME" --generate-notes

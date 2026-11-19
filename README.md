@@ -34,6 +34,14 @@ dotnet publish Jellyfin.Plugin.Tastemate/Jellyfin.Plugin.Tastemate.csproj -c Rel
 
 ## Install
 
+### From the plugin repository (recommended)
+
+1. In Jellyfin go to Dashboard > Plugins > Repositories > Add.
+2. Use name `Tastemate` and URL `https://github.com/creadicted/Tastemate/releases/latest/download/manifest.json`.
+3. Open the Catalog, install Tastemate, restart Jellyfin.
+
+### Manual
+
 1. Build the plugin.
 2. Copy `Jellyfin.Plugin.Tastemate.dll` into a `Tastemate` folder inside the Jellyfin plugins directory, for example `%LOCALAPPDATA%\jellyfin\plugins\Tastemate\` on Windows.
 3. Restart Jellyfin.

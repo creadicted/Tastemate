@@ -9,7 +9,7 @@ description: >
   Define topics such as "Top 10 Horror Movies". Every user ranks movies from the
   library for a topic and can compare their list with another user's list.
 category: "General"
-owner: "jellyfin"
+owner: "creadicted"
 artifacts:
 - "Jellyfin.Plugin.Tastemate.dll"
 changelog: >
