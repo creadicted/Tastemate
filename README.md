@@ -36,15 +36,33 @@ dotnet publish Jellyfin.Plugin.Tastemate/Jellyfin.Plugin.Tastemate.csproj -c Rel
 
 ### From the plugin repository (recommended)
 
-1. In Jellyfin go to Dashboard > Plugins > Repositories > Add.
-2. Use name `Tastemate` and URL `https://github.com/creadicted/Tastemate/releases/latest/download/manifest.json`.
-3. Open the Catalog, install Tastemate, restart Jellyfin.
+1. In Jellyfin open Dashboard > Plugins > Repositories and click Add.
+2. Enter the name `Tastemate` and the URL `https://github.com/creadicted/Tastemate/releases/latest/download/manifest.json`.
+3. Go to the Catalog, open Tastemate and click Install.
+4. Restart Jellyfin.
+5. Open Dashboard > Plugins > Tastemate (page "Top Lists") to create topics and rank movies.
+
+Updates appear in the Catalog and under My Plugins. The scheduled task "Update Plugins" can install them automatically. A restart is needed after each update.
 
 ### Manual
 
-1. Build the plugin.
-2. Copy `Jellyfin.Plugin.Tastemate.dll` into a `Tastemate` folder inside the Jellyfin plugins directory, for example `%LOCALAPPDATA%\jellyfin\plugins\Tastemate\` on Windows.
+1. Download `tastemate_<version>.zip` from the [latest release](https://github.com/creadicted/Tastemate/releases/latest) and unzip it, or build the plugin yourself.
+2. Copy `Jellyfin.Plugin.Tastemate.dll` into a `Tastemate` folder inside the Jellyfin plugins directory:
+   - Windows: `%LOCALAPPDATA%\jellyfin\plugins\Tastemate\`
+   - Linux: `/var/lib/jellyfin/plugins/Tastemate/`
+   - Docker: `<config volume>/plugins/Tastemate/`
 3. Restart Jellyfin.
+
+## Testing
+
+`test/e2e.sh` runs the plugin end to end against a fresh Jellyfin container (Docker or Podman). It builds the plugin, serves it through a local repository manifest, installs it via the Jellyfin API, restarts the server and exercises the topic endpoints.
+
+```shell
+test/e2e.sh          # Jellyfin 10.11.5
+test/e2e.sh 10.11.6  # another image tag
+```
+
+Needs `docker` or `podman`, `dotnet`, `curl` and `python`.
 
 ## Configuration
 

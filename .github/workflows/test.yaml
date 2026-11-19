@@ -1,0 +1,25 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md']
+  pull_request:
+    paths-ignore: ['**/*.md']
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Build
+        run: dotnet build Jellyfin.Plugin.Tastemate.slnx -c Release
+
+      - name: End-to-end test against Jellyfin container
+        run: bash test/e2e.sh
