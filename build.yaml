@@ -1,0 +1,16 @@
+---
+name: "TopCompare"
+guid: "0f930e3f-2977-4737-ac6f-65e6d9a4cc6d"
+version: "1.0.0.0"
+targetAbi: "10.11.0.0"
+framework: "net9.0"
+overview: "Short description about your plugin"
+description: >
+  This is a longer description that can span more than one
+  line and include details about your plugin.
+category: "General"
+owner: "jellyfin"
+artifacts:
+- "Jellyfin.Plugin.TopCompare.dll"
+changelog: >
+  changelog
