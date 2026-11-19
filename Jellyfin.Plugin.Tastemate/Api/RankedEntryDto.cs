@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using Jellyfin.Plugin.Tastemate.Models;
 
 namespace Jellyfin.Plugin.Tastemate.Api;
 
@@ -8,6 +6,9 @@ namespace Jellyfin.Plugin.Tastemate.Api;
 /// A ranked movie with display data.
 /// </summary>
 /// <param name="Rank">The 1-based rank.</param>
-/// <param name="ItemId">The library item id.</param>
+/// <param name="ItemId">The library item id, or empty for an external movie.</param>
+/// <param name="TmdbId">The TMDb id.</param>
 /// <param name="Name">The movie name.</param>
-public record RankedEntryDto(int Rank, Guid ItemId, string Name);
+/// <param name="Year">The production year.</param>
+/// <param name="Poster">The poster image address of an external movie.</param>
+public record RankedEntryDto(int Rank, Guid ItemId, string? TmdbId, string Name, int? Year, string? Poster);

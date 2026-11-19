@@ -7,17 +7,19 @@ Define a topic such as "Top 10 Horror Movies". Every user ranks movies from the 
 ## Features
 
 - **Topics**: any user can create a topic with a title and a size (number of entries). Only the creator or an administrator can delete it.
-- **Rankings**: each user keeps one ranking per topic, built from movies in the library. A movie can only appear once per list and ranks must be unique.
+- **Rankings**: each user keeps one ranking per topic. A movie can only appear once per list and ranks must be unique.
+- **Movies outside your library**: search finds movies in your library and, through Jellyfin's built-in TMDb metadata provider, any other movie. Movies that are not in the library can still be ranked, with the poster from TMDb.
 - **Comparison**: compare your ranking with any other user's ranking for the same topic. The result lists shared movies with both ranks, movies only in one list, and a similarity score.
 - **Dashboard page**: manage topics, edit your ranking and run comparisons from the "Tastemate" page in the Jellyfin dashboard sidebar.
 
 ### Similarity score
 
-Every movie in both lists scores `1 - |rankA - rankB| / size`. The sum is divided by the topic size and shown as a percentage. Movies in only one list score 0. Identical lists give 100%.
+Movies are matched by TMDb id, so a movie one user picked from the library and another picked from TMDb counts as the same movie. Library movies without a TMDb id only match the same library item. Every movie in both lists scores `1 - |rankA - rankB| / size`. The sum is divided by the topic size and shown as a percentage. Movies in only one list score 0. Identical lists give 100%.
 
 ## Requirements
 
 - Jellyfin 10.11.x (target ABI `10.11.0.0`)
+- For searching movies outside the library: a TMDb metadata provider enabled on the server (it is by default) and internet access from the server
 - [.NET SDK 9.0](https://dotnet.microsoft.com/en-us/download/dotnet) to build
 
 ## Build
@@ -111,12 +113,13 @@ All endpoints require an authenticated user and live under `/Tastemate`.
 | DELETE | `/Tastemate/Topics/{topicId}` | Delete a topic (creator or administrator). |
 | GET | `/Tastemate/Topics/{topicId}/Rankings` | List users who ranked the topic. |
 | GET | `/Tastemate/Topics/{topicId}/Rankings/{userId}` | Get a user's ranking. |
-| PUT | `/Tastemate/Topics/{topicId}/Ranking` | Replace the caller's ranking. |
+| PUT | `/Tastemate/Topics/{topicId}/Ranking` | Replace the caller's ranking. Each entry has `Rank` and either `ItemId` (library movie) or `TmdbId`, `Title`, optional `Year` and `Poster` (a `https://image.tmdb.org/` address). |
+| GET | `/Tastemate/Search?query=&year=` | Search movies with the server's metadata providers. Returns `TmdbId`, `Name`, `Year`, `Poster`. |
 | GET | `/Tastemate/Topics/{topicId}/Compare/{otherUserId}` | Compare the caller with another user. |
 
 ## Data
 
-Topics and rankings are stored in `Jellyfin.Plugin.Tastemate.data.json` in the Jellyfin plugin configurations directory.
+Rankings saved by earlier versions keep working. Topics and rankings are stored in `Jellyfin.Plugin.Tastemate.data.json` in the Jellyfin plugin configurations directory.
 
 ## License
 

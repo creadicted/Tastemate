@@ -2,11 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
+using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Tastemate.Models;
 using Jellyfin.Plugin.Tastemate.Services;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Providers;
+using MediaBrowser.Model.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,10 +26,13 @@ public class TastemateController : ControllerBase
 {
     private const string UserIdClaim = "Jellyfin-UserId";
     private const int MaxTitleLength = 100;
+    private const int MaxMovieTitleLength = 200;
+    private const string PosterPrefix = "https://image.tmdb.org/";
 
     private readonly TopStore _store;
     private readonly ILibraryManager _libraryManager;
     private readonly IUserManager _userManager;
+    private readonly IProviderManager _providerManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TastemateController"/> class.
@@ -34,11 +40,45 @@ public class TastemateController : ControllerBase
     /// <param name="store">Instance of the <see cref="TopStore"/> class.</param>
     /// <param name="libraryManager">Instance of the <see cref="ILibraryManager"/> interface.</param>
     /// <param name="userManager">Instance of the <see cref="IUserManager"/> interface.</param>
-    public TastemateController(TopStore store, ILibraryManager libraryManager, IUserManager userManager)
+    /// <param name="providerManager">Instance of the <see cref="IProviderManager"/> interface.</param>
+    public TastemateController(TopStore store, ILibraryManager libraryManager, IUserManager userManager, IProviderManager providerManager)
     {
         _store = store;
         _libraryManager = libraryManager;
         _userManager = userManager;
+        _providerManager = providerManager;
+    }
+
+    /// <summary>
+    /// Searches movies with the server's metadata providers (TMDb), including movies that are not in the library.
+    /// </summary>
+    /// <param name="query">The movie name.</param>
+    /// <param name="year">An optional production year.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The matching movies that have a TMDb id.</returns>
+    [HttpGet("Search")]
+    public async Task<ActionResult<IReadOnlyList<SearchResultDto>>> Search([FromQuery] string query, [FromQuery] int? year, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(query) || query.Length > MaxMovieTitleLength)
+        {
+            return BadRequest("Query must be 1-200 characters.");
+        }
+
+        var searchQuery = new RemoteSearchQuery<MovieInfo>
+        {
+            SearchInfo = new MovieInfo { Name = query.Trim(), Year = year }
+        };
+
+        var results = await _providerManager.GetRemoteSearchResults<Movie, MovieInfo>(searchQuery, cancellationToken).ConfigureAwait(false);
+        var movies = results
+            .Select(r => (Result: r, TmdbId: r.GetProviderId(MediaBrowser.Model.Entities.MetadataProvider.Tmdb)))
+            .Where(r => !string.IsNullOrEmpty(r.TmdbId) && !string.IsNullOrEmpty(r.Result.Name))
+            .GroupBy(r => r.TmdbId)
+            .Select(g => g.First())
+            .Take(20)
+            .Select(r => new SearchResultDto(r.TmdbId!, r.Result.Name, r.Result.ProductionYear, r.Result.ImageUrl))
+            .ToList();
+        return Ok(movies);
     }
 
     /// <summary>
@@ -174,17 +214,22 @@ public class TastemateController : ControllerBase
             return BadRequest($"Ranks must be unique and between 1 and {topic.Size}.");
         }
 
-        if (entries.Select(e => e.ItemId).Distinct().Count() != entries.Count)
+        foreach (var entry in entries)
+        {
+            var error = Validate(entry);
+            if (error is not null)
+            {
+                return BadRequest(error);
+            }
+        }
+
+        var resolved = entries.Select(Resolve).ToList();
+        if (resolved.Select(e => e.Key).Distinct().Count() != resolved.Count)
         {
             return BadRequest("A movie can only be ranked once.");
         }
 
-        if (entries.Any(e => _libraryManager.GetItemById(e.ItemId) is not Movie))
-        {
-            return BadRequest("Every entry must be a movie in the library.");
-        }
-
-        var ranking = await _store.SetRankingAsync(topicId, userId, entries).ConfigureAwait(false);
+        var ranking = await _store.SetRankingAsync(topicId, userId, resolved).ConfigureAwait(false);
         return Ok(new RankingDto(userId, GetUserName(userId), ranking.Entries.Select(ToDto).ToList()));
     }
 
@@ -215,13 +260,14 @@ public class TastemateController : ControllerBase
             return NotFound("Both users need a ranking for this topic.");
         }
 
-        var result = RankingComparer.Compare(mine, theirs, topic.Size);
-        var names = mine.Entries.Concat(theirs.Entries)
-            .Select(e => e.ItemId)
-            .Distinct()
-            .ToDictionary(id => id, GetItemName);
+        var mineResolved = Resolve(mine);
+        var theirsResolved = Resolve(theirs);
+        var result = RankingComparer.Compare(mineResolved, theirsResolved, topic.Size);
+        var movies = mineResolved.Entries.Concat(theirsResolved.Entries)
+            .GroupBy(e => e.Key)
+            .ToDictionary(g => g.Key, g => ToMovie(g.First()));
 
-        return Ok(new CompareResponse(GetUserName(userId), GetUserName(otherUserId), result, names));
+        return Ok(new CompareResponse(GetUserName(userId), GetUserName(otherUserId), result, movies));
     }
 
     private bool TryGetUserId(out Guid userId)
@@ -234,13 +280,80 @@ public class TastemateController : ControllerBase
         return _userManager.GetUserById(userId)?.Username ?? "Unknown user";
     }
 
-    private string GetItemName(Guid itemId)
+    private static string? Validate(RankingEntry entry)
     {
-        return _libraryManager.GetItemById(itemId)?.Name ?? "Unknown movie";
+        if (entry.ItemId != Guid.Empty)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(entry.TmdbId) || entry.TmdbId.Length > 12 || !entry.TmdbId.All(char.IsAsciiDigit))
+        {
+            return "Every entry needs a library item or a TMDb id.";
+        }
+
+        if (string.IsNullOrWhiteSpace(entry.Title) || entry.Title.Length > MaxMovieTitleLength)
+        {
+            return $"Movie title must be 1-{MaxMovieTitleLength} characters.";
+        }
+
+        if (entry.Year is < 1888 or > 2200)
+        {
+            return "Movie year is out of range.";
+        }
+
+        if (entry.Poster is not null && !entry.Poster.StartsWith(PosterPrefix, StringComparison.Ordinal))
+        {
+            return "Poster must be a TMDb image.";
+        }
+
+        return null;
     }
 
-    private RankedEntryDto ToDto(RankingEntry entry)
+    private UserRanking Resolve(UserRanking ranking)
     {
-        return new RankedEntryDto(entry.Rank, entry.ItemId, GetItemName(entry.ItemId));
+        return new UserRanking
+        {
+            TopicId = ranking.TopicId,
+            UserId = ranking.UserId,
+            UpdatedAt = ranking.UpdatedAt,
+            Entries = ranking.Entries.Select(Resolve).ToList()
+        };
+    }
+
+    /// <summary>
+    /// Refreshes a library entry from the library (title, year, TMDb id); other entries are returned as they are.
+    /// </summary>
+    private RankingEntry Resolve(RankingEntry entry)
+    {
+        if (entry.ItemId == Guid.Empty || _libraryManager.GetItemById(entry.ItemId) is not Movie movie)
+        {
+            return entry;
+        }
+
+        return new RankingEntry
+        {
+            Rank = entry.Rank,
+            ItemId = entry.ItemId,
+            TmdbId = movie.GetProviderId(MediaBrowser.Model.Entities.MetadataProvider.Tmdb) ?? entry.TmdbId,
+            Title = movie.Name,
+            Year = movie.ProductionYear ?? entry.Year,
+            Poster = entry.Poster
+        };
+    }
+
+    private MovieDto ToMovie(RankingEntry entry)
+    {
+        return new MovieDto(
+            entry.Title ?? "Unknown movie",
+            entry.Year,
+            entry.ItemId == Guid.Empty ? null : entry.ItemId,
+            entry.Poster);
+    }
+
+    private RankedEntryDto ToDto(RankingEntry stored)
+    {
+        var entry = Resolve(stored);
+        return new RankedEntryDto(entry.Rank, entry.ItemId, entry.TmdbId, entry.Title ?? "Unknown movie", entry.Year, entry.Poster);
     }
 }

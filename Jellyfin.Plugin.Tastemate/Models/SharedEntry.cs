@@ -1,5 +1,3 @@
-using System;
-
 namespace Jellyfin.Plugin.Tastemate.Models;
 
 /// <summary>
@@ -8,9 +6,9 @@ namespace Jellyfin.Plugin.Tastemate.Models;
 public class SharedEntry
 {
     /// <summary>
-    /// Gets or sets the library item id.
+    /// Gets or sets the movie key, see <see cref="RankingEntry.Key"/>.
     /// </summary>
-    public Guid ItemId { get; set; }
+    public string Key { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the rank in the first list.

@@ -128,6 +128,25 @@ api "$JF/Tastemate/Topics" | pyj 'len(d)==0' >/dev/null || fail "expected empty 
 TOPIC="$(api -X POST "$JF/Tastemate/Topics" -d '{"Title":"Top 3 e2e","Size":3}' | pyj 'd["Id"]')"
 [ -n "$TOPIC" ] || fail "topic not created"
 api "$JF/Tastemate/Topics" | pyj 'len(d)==1' >/dev/null || fail "expected one topic"
+
+step "Rank movies that are not in the library and compare two users"
+api "$JF/Tastemate/Search?query=matrix" | pyj "isinstance(d, list)" >/dev/null || fail "search endpoint failed"
+api -X POST "$JF/Users/New" -d '{"Name":"mate","Password":"e2e-pass"}' >/dev/null
+MATE_TOKEN="$(curl -fs -X POST "$JF/Users/AuthenticateByName" -H 'Content-Type: application/json'   -H "Authorization: $AUTH" -d '{"Username":"mate","Pw":"e2e-pass"}' | pyj 'd["AccessToken"]')"
+mate_api() { curl -fs -H "Authorization: $AUTH, Token=\"$MATE_TOKEN\"" -H 'Content-Type: application/json' "$@"; }
+MATE_ID="$(mate_api "$JF/Users/Me" | pyj 'd["Id"]')"
+MATRIX='{"Rank":1,"TmdbId":"603","Title":"The Matrix","Year":1999}'
+PULP='{"Rank":2,"TmdbId":"680","Title":"Pulp Fiction","Year":1994}'
+api -X PUT "$JF/Tastemate/Topics/$TOPIC/Ranking" -d "{\"Entries\":[$MATRIX,$PULP]}" >/dev/null || fail "saving external ranking failed"
+mate_api -X PUT "$JF/Tastemate/Topics/$TOPIC/Ranking"   -d '{"Entries":[{"Rank":1,"TmdbId":"680","Title":"Pulp Fiction","Year":1994},{"Rank":2,"TmdbId":"603","Title":"The Matrix","Year":1999}]}' >/dev/null   || fail "saving second ranking failed"
+api "$JF/Tastemate/Topics/$TOPIC/Compare/$MATE_ID"   | pyj "len(d['Result']['Shared']) == 2 and d['Result']['Similarity'] == 44.4 and d['Movies']['tmdb:603']['Name'] == 'The Matrix'" >/dev/null   || fail "comparison of external movies is wrong"
+if api -X PUT "$JF/Tastemate/Topics/$TOPIC/Ranking"   -d '{"Entries":[{"Rank":1,"TmdbId":"603","Title":"x","Poster":"https://evil.example/p.jpg"}]}' >/dev/null 2>&1; then
+  fail "foreign poster address was accepted"
+fi
+if api -X PUT "$JF/Tastemate/Topics/$TOPIC/Ranking"   -d "{\"Entries\":[$MATRIX,{\"Rank\":2,\"TmdbId\":\"603\",\"Title\":\"The Matrix\"}]}" >/dev/null 2>&1; then
+  fail "duplicate movie was accepted"
+fi
+
 api -X DELETE "$JF/Tastemate/Topics/$TOPIC" >/dev/null
 api "$JF/Tastemate/Topics" | pyj 'len(d)==0' >/dev/null || fail "topic not deleted"
 

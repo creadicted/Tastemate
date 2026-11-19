@@ -150,11 +150,19 @@
                     return b;
                 }
 
-                function poster(itemId) {
+                var EMPTY_ID = '00000000000000000000000000000000';
+                function isLibrary(itemId) { return !!itemId && norm(itemId) !== EMPTY_ID; }
+
+                // movie: { ItemId, Poster } - library items use the server image, TMDb movies their own poster
+                function poster(movie) {
                     var img = el('img', undefined, 'tm-poster');
                     img.loading = 'lazy';
                     img.alt = '';
-                    img.src = ApiClient.getUrl('Items/' + itemId + '/Images/Primary', { maxHeight: 160, quality: 80 });
+                    if (isLibrary(movie.ItemId)) {
+                        img.src = ApiClient.getUrl('Items/' + movie.ItemId + '/Images/Primary', { maxHeight: 160, quality: 80 });
+                    } else if (movie.Poster) {
+                        img.src = movie.Poster;
+                    }
                     img.addEventListener('error', function () { img.style.visibility = 'hidden'; });
                     return img;
                 }
@@ -247,7 +255,9 @@
                     $('#TmResults').innerHTML = '';
                     Dashboard.showLoadingMsg();
                     api('GET', 'Topics/' + topic.Id + '/Rankings/' + me).then(function (ranking) {
-                        state.entries = ranking.Entries.map(function (e) { return { ItemId: e.ItemId, Name: e.Name }; });
+                        state.entries = ranking.Entries.map(function (e) {
+                            return { ItemId: isLibrary(e.ItemId) ? e.ItemId : null, TmdbId: e.TmdbId, Name: e.Name, Year: e.Year, Poster: e.Poster };
+                        });
                     }, function () { /* no ranking yet */ }).then(function () {
                         renderSlots();
                         show('TmFillView');
@@ -266,8 +276,8 @@
                             var row = el('div', undefined, 'tm-slot' + (entry ? '' : ' empty'));
                             row.appendChild(el('div', String(index + 1), 'tm-rank'));
                             if (entry) {
-                                row.appendChild(poster(entry.ItemId));
-                                row.appendChild(el('div', entry.Name, 'tm-name'));
+                                row.appendChild(poster(entry));
+                                row.appendChild(el('div', entry.Name + (entry.Year ? ' (' + entry.Year + ')' : '') + (entry.ItemId ? '' : ' · not in library'), 'tm-name'));
                                 var up = btn('↑', function () { move(index, -1); });
                                 var down = btn('↓', function () { move(index, 1); });
                                 up.disabled = index === 0;
@@ -304,38 +314,96 @@
                     searchTimer = setTimeout(search, 250);
                 });
 
+                function inList(movie) {
+                    return state.entries.some(function (e) {
+                        if (movie.ItemId && e.ItemId) { return norm(e.ItemId) === norm(movie.ItemId); }
+                        return !!movie.TmdbId && e.TmdbId === movie.TmdbId;
+                    });
+                }
+
+                function addRow(container, movie, hint) {
+                    var row = el('div', undefined, 'tm-slot');
+                    row.appendChild(poster(movie));
+                    var name = el('div', undefined, 'tm-name');
+                    name.textContent = movie.Name + (movie.Year ? ' (' + movie.Year + ')' : '');
+                    if (hint) { name.appendChild(el('div', hint, 'tm-muted')); }
+                    row.appendChild(name);
+                    var add = btn(inList(movie) ? 'Added' : 'Add', function () {
+                        if (state.entries.length >= state.topic.Size) {
+                            Dashboard.alert({ title: 'Tastemate', message: 'Your list is full (' + state.topic.Size + '). Remove a movie first.' });
+                            return;
+                        }
+                        state.entries.push(movie);
+                        add.textContent = 'Added';
+                        add.disabled = true;
+                        touch();
+                    }, 'primary');
+                    add.disabled = inList(movie);
+                    row.appendChild(add);
+                    container.appendChild(row);
+                }
+
+                var searchSeq = 0;
                 function search() {
                     var term = $('#TmSearch').value.trim();
                     var results = $('#TmResults');
+                    var seq = ++searchSeq;
                     results.innerHTML = '';
                     if (!term) { return; }
-                    ApiClient.getItems(me, { IncludeItemTypes: 'Movie', Recursive: true, SearchTerm: term, Limit: 12, SortBy: 'SortName' }).then(function (result) {
-                        if (!result.Items.length) { results.appendChild(el('div', 'No movies found.', 'tm-muted')); }
-                        result.Items.forEach(function (item) {
-                            var row = el('div', undefined, 'tm-slot');
-                            row.appendChild(poster(item.Id));
-                            row.appendChild(el('div', item.Name + (item.ProductionYear ? ' (' + item.ProductionYear + ')' : ''), 'tm-name'));
-                            var inList = state.entries.some(function (e) { return norm(e.ItemId) === norm(item.Id); });
-                            var add = btn(inList ? 'Added' : 'Add', function () {
-                                if (state.entries.length >= state.topic.Size) {
-                                    Dashboard.alert({ title: 'Tastemate', message: 'Your list is full (' + state.topic.Size + '). Remove a movie first.' });
-                                    return;
-                                }
-                                state.entries.push({ ItemId: item.Id, Name: item.Name });
-                                add.textContent = 'Added';
-                                add.disabled = true;
-                                touch();
-                            }, 'primary');
-                            add.disabled = inList;
-                            row.appendChild(add);
-                            results.appendChild(row);
+
+                    var libraryBox = el('div');
+                    libraryBox.appendChild(el('h4', 'In your library'));
+                    var otherBox = el('div');
+                    otherBox.appendChild(el('h4', 'Other movies (TMDb)'));
+                    results.appendChild(libraryBox);
+                    results.appendChild(otherBox);
+                    libraryBox.appendChild(el('div', 'Searching...', 'tm-muted'));
+                    otherBox.appendChild(el('div', 'Searching...', 'tm-muted'));
+
+                    var library = ApiClient.getItems(me, {
+                        IncludeItemTypes: 'Movie', Recursive: true, SearchTerm: term, Limit: 8, SortBy: 'SortName', Fields: 'ProviderIds'
+                    }).then(function (result) {
+                        return result.Items.map(function (item) {
+                            return { ItemId: item.Id, TmdbId: (item.ProviderIds || {}).Tmdb || null, Name: item.Name, Year: item.ProductionYear || null, Poster: null };
                         });
-                    }, fail);
+                    }, function () { return []; });
+
+                    var remote = api('GET', 'Search?query=' + encodeURIComponent(term)).then(function (found) {
+                        return found.map(function (m) {
+                            return { ItemId: null, TmdbId: m.TmdbId, Name: m.Name, Year: m.Year, Poster: m.Poster };
+                        });
+                    }, function () { return null; });
+
+                    Promise.all([library, remote]).then(function (both) {
+                        if (seq !== searchSeq) { return; }
+                        var libraryMovies = both[0];
+                        var remoteMovies = both[1];
+                        libraryBox.innerHTML = '';
+                        libraryBox.appendChild(el('h4', 'In your library'));
+                        if (!libraryMovies.length) { libraryBox.appendChild(el('div', 'No matches in your library.', 'tm-muted')); }
+                        libraryMovies.forEach(function (m) { addRow(libraryBox, m); });
+
+                        otherBox.innerHTML = '';
+                        otherBox.appendChild(el('h4', 'Other movies (TMDb)'));
+                        if (remoteMovies === null) {
+                            otherBox.appendChild(el('div', 'TMDb search is not available. Check that a TMDb metadata provider is enabled on the server.', 'tm-muted'));
+                            return;
+                        }
+                        var inLibrary = {};
+                        libraryMovies.forEach(function (m) { if (m.TmdbId) { inLibrary[m.TmdbId] = true; } });
+                        var extra = remoteMovies.filter(function (m) { return !inLibrary[m.TmdbId]; });
+                        if (!extra.length) { otherBox.appendChild(el('div', 'No other matches.', 'tm-muted')); }
+                        extra.forEach(function (m) { addRow(otherBox, m, 'Not in your library'); });
+                    });
                 }
 
                 $('#TmSave').addEventListener('click', function () {
                     Dashboard.showLoadingMsg();
-                    var entries = state.entries.map(function (e, i) { return { Rank: i + 1, ItemId: e.ItemId }; });
+                    var entries = state.entries.map(function (e, i) {
+                        var entry = { Rank: i + 1, TmdbId: e.TmdbId || null, Title: e.Name, Year: e.Year || null, Poster: e.Poster || null };
+                        if (e.ItemId) { entry.ItemId = e.ItemId; }
+                        return entry;
+                    });
                     api('PUT', 'Topics/' + state.topic.Id + '/Ranking', { Entries: entries }).then(function () {
                         state.dirty = false;
                         return loadLists();
@@ -375,9 +443,10 @@
                             res.Shared.forEach(function (s) {
                                 var row = el('tr');
                                 var cell = el('td');
-                                cell.appendChild(poster(s.ItemId));
+                                var movie = r.Movies[s.Key];
+                                cell.appendChild(poster(movie));
                                 row.appendChild(cell);
-                                [r.Names[s.ItemId], '#' + s.RankA, '#' + s.RankB, s.Difference === 0 ? 'same' : String(s.Difference)].forEach(function (c) {
+                                [movie.Name + (movie.Year ? ' (' + movie.Year + ')' : ''), '#' + s.RankA, '#' + s.RankB, s.Difference === 0 ? 'same' : String(s.Difference)].forEach(function (c) {
                                     row.appendChild(el('td', c));
                                 });
                                 table.appendChild(row);
@@ -393,8 +462,9 @@
                             group[1].forEach(function (e) {
                                 var row = el('div', undefined, 'tm-slot');
                                 row.appendChild(el('div', String(e.Rank), 'tm-rank'));
-                                row.appendChild(poster(e.ItemId));
-                                row.appendChild(el('div', r.Names[e.ItemId], 'tm-name'));
+                                var movie = r.Movies[e.Key];
+                                row.appendChild(poster(movie));
+                                row.appendChild(el('div', movie.Name + (movie.Year ? ' (' + movie.Year + ')' : ''), 'tm-name'));
                                 col.appendChild(row);
                             });
                             cols.appendChild(col);

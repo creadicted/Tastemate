@@ -20,18 +20,18 @@ public static class RankingComparer
     /// <returns>The comparison.</returns>
     public static ComparisonResult Compare(UserRanking a, UserRanking b, int size)
     {
-        var ranksA = a.Entries.ToDictionary(e => e.ItemId, e => e.Rank);
-        var ranksB = b.Entries.ToDictionary(e => e.ItemId, e => e.Rank);
+        var ranksA = a.Entries.ToDictionary(e => e.Key, e => e.Rank);
+        var ranksB = b.Entries.ToDictionary(e => e.Key, e => e.Rank);
 
         var shared = a.Entries
-            .Where(e => ranksB.ContainsKey(e.ItemId))
+            .Where(e => ranksB.ContainsKey(e.Key))
             .OrderBy(e => e.Rank)
             .Select(e => new SharedEntry
             {
-                ItemId = e.ItemId,
+                Key = e.Key,
                 RankA = e.Rank,
-                RankB = ranksB[e.ItemId],
-                Difference = Math.Abs(e.Rank - ranksB[e.ItemId])
+                RankB = ranksB[e.Key],
+                Difference = Math.Abs(e.Rank - ranksB[e.Key])
             })
             .ToList();
 
@@ -40,8 +40,8 @@ public static class RankingComparer
         return new ComparisonResult
         {
             Shared = shared,
-            OnlyInA = a.Entries.Where(e => !ranksB.ContainsKey(e.ItemId)).OrderBy(e => e.Rank).ToList(),
-            OnlyInB = b.Entries.Where(e => !ranksA.ContainsKey(e.ItemId)).OrderBy(e => e.Rank).ToList(),
+            OnlyInA = a.Entries.Where(e => !ranksB.ContainsKey(e.Key)).OrderBy(e => e.Rank).ToList(),
+            OnlyInB = b.Entries.Where(e => !ranksA.ContainsKey(e.Key)).OrderBy(e => e.Rank).ToList(),
             Similarity = Math.Round(score / size * 100d, 1)
         };
     }
