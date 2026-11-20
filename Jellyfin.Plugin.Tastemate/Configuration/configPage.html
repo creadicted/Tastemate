@@ -49,6 +49,8 @@
                     <div id="TmCards" class="tm-cards"></div>
                     <div id="TmNoLists" class="tm-empty tm-muted hide">No lists yet. Create one, e.g. "Top 10 Horror Movies".</div>
 
+                    <div id="TmMenuNote" class="tm-muted hide" style="margin-top:2em"></div>
+
                     <!-- Seerr settings (administrators) -->
                     <form id="TmSeerr" class="tm-card hide" style="margin-top:2em;max-width:36em">
                         <h3>Seerr</h3>
@@ -225,6 +227,18 @@
                         Object.keys(r.States).forEach(function (id) { state.seerrStates[id] = r.States[id]; });
                         refreshSeerr();
                     }, function () { /* keep the buttons as they are */ });
+                }
+
+                function loadMenuNote() {
+                    if (!state.isAdmin) { return; }
+                    api('GET', 'Menu').then(function (registered) {
+                        var note = $('#TmMenuNote');
+                        var url = ApiClient.getUrl('Tastemate/Page');
+                        note.classList.remove('hide');
+                        note.textContent = registered
+                            ? 'Tastemate is in every user's menu. Direct link: ' + url
+                            : 'Users who are not administrators can open Tastemate at ' + url + '. Install the File Transformation plugin to add it to the user menu.';
+                    }, function () { /* not available */ });
                 }
 
                 function loadSeerr() {
@@ -607,6 +621,7 @@
                     ApiClient.getCurrentUser().then(function (user) {
                         state.isAdmin = !!(user && user.Policy && user.Policy.IsAdministrator);
                         loadSeerr();
+                        loadMenuNote();
                         return loadLists();
                     }, fail);
                 });

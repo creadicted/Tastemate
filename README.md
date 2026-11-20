@@ -13,6 +13,8 @@ Define a topic such as "Top 10 Horror Movies". Every user ranks movies from the 
 - **Seerr requests** (optional): an administrator links a [Seerr](https://seerr.dev/) server in the Tastemate page. Movies that are not in the library then get a "Request in Seerr" button, with their Seerr state (requested, downloading, available). Requests are made as the user's own Seerr account, matched by Jellyfin user id or user name. Users need to have signed in to Seerr with Jellyfin once.
 - **Comparison**: compare your ranking with any other user's ranking for the same topic. The result lists shared movies with both ranks, movies only in one list, and a similarity score.
 - **Dashboard page**: manage topics, edit your ranking and run comparisons from the "Tastemate" page in the Jellyfin dashboard sidebar.
+- **Page for all users**: the dashboard is only open to administrators, so the same page is also served at `/Tastemate/Page` (for example `http://jellyfin:8096/Tastemate/Page`). It signs in with the session the Jellyfin web client keeps in the browser, so users need to be signed in to Jellyfin in that browser.
+- **User menu entry** (optional): when the [File Transformation](https://github.com/IAmParadox27/jellyfin-plugin-file-transformation) plugin is installed, Tastemate adds itself to the web client's user menu, next to Settings, and links to that page. Without File Transformation share the link instead. Install File Transformation before or together with Tastemate and restart Jellyfin.
 
 ### Similarity score
 
@@ -120,6 +122,8 @@ All endpoints require an authenticated user and live under `/Tastemate`.
 | GET | `/Tastemate/Topics/{topicId}/Rankings` | List users who ranked the topic. |
 | GET | `/Tastemate/Topics/{topicId}/Rankings/{userId}` | Get a user's ranking. |
 | PUT | `/Tastemate/Topics/{topicId}/Ranking` | Replace the caller's ranking. Each entry has `Rank`, an optional `Reason`, and either `ItemId` (library movie) or `TmdbId`, `Title`, optional `Year` and `Poster` (a `https://image.tmdb.org/` address). |
+| GET | `/Tastemate/Page` | The Tastemate page for all users (no authentication, it holds no data). Also `/Tastemate/standalone.js` and `/Tastemate/inject.js`. |
+| GET | `/Tastemate/Menu` | Whether Tastemate was added to the user menu. |
 | GET | `/Tastemate/Search?query=&year=` | Search movies with the server's metadata providers. Returns `TmdbId`, `Name`, `Year`, `Poster`. |
 | GET | `/Tastemate/Topics/{topicId}/Compare/{otherUserId}` | Compare the caller with another user. |
 | GET | `/Tastemate/Seerr/Status?tmdbIds=` | Whether Seerr is configured and the state (`none`, `pending`, `processing`, `partial`, `available`) of up to 25 comma separated TMDb ids. |

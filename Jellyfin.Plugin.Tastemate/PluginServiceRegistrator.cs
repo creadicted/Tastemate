@@ -16,5 +16,6 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<TopStore>();
         serviceCollection.AddSingleton<SeerrSettingsResolver>();
         serviceCollection.AddSingleton<SeerrClient>();
+        serviceCollection.AddSingleton<UserMenuService>();
     }
 }
