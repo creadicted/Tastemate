@@ -18,6 +18,9 @@ jobs:
         with:
           dotnet-version: 9.0.x
 
+      - name: Check browser scripts
+        run: bash test/check-js.sh
+
       - name: Build
         run: dotnet build Jellyfin.Plugin.Tastemate.slnx -c Release
 
