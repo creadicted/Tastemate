@@ -1,3 +1,5 @@
+<p align="center"><img src="images/logo.png" alt="Tastemate" width="360"></p>
+
 # Tastemate
 
 A Jellyfin plugin for Top X movie lists and taste comparison between users.

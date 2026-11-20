@@ -55,6 +55,7 @@ jobs:
               description: "Define topics such as Top 10 Horror Movies. Every user ranks movies from the library for a topic and can compare their list with another user.",
               overview: "Create Top X movie lists per topic and compare rankings between users",
               owner: "creadicted",
+              imageUrl: "https://raw.githubusercontent.com/creadicted/Tastemate/main/images/logo.png",
               category: "General",
               versions: ([{
                 version: $version,

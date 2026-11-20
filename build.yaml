@@ -10,6 +10,7 @@ description: >
   library for a topic and can compare their list with another user's list.
 category: "General"
 owner: "creadicted"
+imageUrl: "https://raw.githubusercontent.com/creadicted/Tastemate/main/images/logo.png"
 artifacts:
 - "Jellyfin.Plugin.Tastemate.dll"
 changelog: >
