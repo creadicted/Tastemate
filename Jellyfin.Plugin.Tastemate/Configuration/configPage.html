@@ -48,6 +48,21 @@
                     </div>
                     <div id="TmCards" class="tm-cards"></div>
                     <div id="TmNoLists" class="tm-empty tm-muted hide">No lists yet. Create one, e.g. "Top 10 Horror Movies".</div>
+
+                    <!-- Seerr settings (administrators) -->
+                    <form id="TmSeerr" class="tm-card hide" style="margin-top:2em;max-width:36em">
+                        <h3>Seerr</h3>
+                        <div class="tm-muted">Lets users request movies that are not in the library. Requests are made as the user's own Seerr account (matched by Jellyfin user). Leave the address empty to turn this off.</div>
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="TmSeerrAddress">Seerr address (e.g. http://seerr:5055)</label>
+                            <input id="TmSeerrAddress" type="text" is="emby-input" />
+                        </div>
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="TmSeerrKey">API key</label>
+                            <input id="TmSeerrKey" type="password" is="emby-input" autocomplete="off" />
+                        </div>
+                        <div><button type="submit" class="tm-btn primary">Save Seerr settings</button></div>
+                    </form>
                 </div>
 
                 <!-- Create -->
@@ -116,7 +131,7 @@
             (function () {
                 var page = document.querySelector('#TastematePage');
                 var me = null;
-                var state = { topics: [], rankers: {}, topic: null, entries: [], dirty: false, isAdmin: false };
+                var state = { topics: [], rankers: {}, topic: null, entries: [], dirty: false, isAdmin: false, seerr: false, seerrStates: {} };
                 var views = ['TmListView', 'TmCreateView', 'TmFillView', 'TmCompareView'];
 
                 function $(id) { return page.querySelector(id); }
@@ -168,6 +183,69 @@
                     img.addEventListener('error', function () { img.style.visibility = 'hidden'; });
                     return img;
                 }
+
+                // ---- Seerr ----
+                var SEERR_LABELS = { pending: 'Requested', processing: 'Downloading', partial: 'Partly available', available: 'In Seerr: available' };
+                var seerrControls = [];
+
+                function applySeerr(control) {
+                    var s = state.seerrStates[control.tmdbId];
+                    var label = SEERR_LABELS[s];
+                    control.button.textContent = label || 'Request in Seerr';
+                    control.button.disabled = !!label;
+                }
+
+                function refreshSeerr() {
+                    seerrControls = seerrControls.filter(function (c) { return c.button.isConnected; });
+                    seerrControls.forEach(applySeerr);
+                }
+
+                // Movies outside the library get a request button once Seerr is configured
+                function seerrControl(movie) {
+                    if (!state.seerr || isLibrary(movie.ItemId) || !movie.TmdbId) { return null; }
+                    var control = { tmdbId: movie.TmdbId };
+                    control.button = btn('Request in Seerr', function () {
+                        control.button.disabled = true;
+                        api('POST', 'Seerr/Request', { TmdbId: movie.TmdbId }).then(function (r) {
+                            Object.keys(r.States).forEach(function (id) { state.seerrStates[id] = r.States[id]; });
+                            refreshSeerr();
+                        }, function (response) { applySeerr(control); fail(response); });
+                    });
+                    seerrControls.push(control);
+                    applySeerr(control);
+                    return control.button;
+                }
+
+                function loadSeerrStates(movies) {
+                    if (!state.seerr) { return; }
+                    var ids = movies.filter(function (m) { return !isLibrary(m.ItemId) && m.TmdbId; }).map(function (m) { return m.TmdbId; });
+                    if (!ids.length) { return; }
+                    api('GET', 'Seerr/Status?tmdbIds=' + ids.slice(0, 25).join(',')).then(function (r) {
+                        Object.keys(r.States).forEach(function (id) { state.seerrStates[id] = r.States[id]; });
+                        refreshSeerr();
+                    }, function () { /* keep the buttons as they are */ });
+                }
+
+                function loadSeerr() {
+                    api('GET', 'Seerr/Status').then(function (r) { state.seerr = r.Enabled; }, function () { state.seerr = false; });
+                    if (!state.isAdmin) { return; }
+                    api('GET', 'Seerr/Settings').then(function (s) {
+                        $('#TmSeerr').classList.remove('hide');
+                        $('#TmSeerrAddress').value = s.Address;
+                        $('#TmSeerrKey').value = '';
+                        $('#TmSeerrKey').placeholder = s.HasApiKey ? 'Saved. Leave empty to keep it.' : '';
+                    }, function () { /* not available */ });
+                }
+
+                $('#TmSeerr').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    api('PUT', 'Seerr/Settings', { Address: $('#TmSeerrAddress').value, ApiKey: $('#TmSeerrKey').value }).then(function (s) {
+                        Dashboard.hideLoadingMsg();
+                        Dashboard.alert({ title: 'Tastemate', message: s.Address ? 'Connected to Seerr. Settings saved.' : 'Seerr turned off.' });
+                        loadSeerr();
+                    }, fail);
+                });
 
                 function show(view) {
                     views.forEach(function (v) { $('#' + v).classList.toggle('hide', v !== view); });
@@ -262,6 +340,7 @@
                         });
                     }, function () { /* no ranking yet */ }).then(function () {
                         renderSlots();
+                        loadSeerrStates(state.entries);
                         show('TmFillView');
                         Dashboard.hideLoadingMsg();
                     });
@@ -297,6 +376,8 @@
                                     if (!state.dirty) { state.dirty = true; renderHeader(); }
                                 });
                                 info.appendChild(reason);
+                                var request = seerrControl(entry);
+                                if (request) { info.appendChild(request); }
                                 row.appendChild(info);
                                 var up = btn('↑', function () { move(index, -1); });
                                 var down = btn('↓', function () { move(index, 1); });
@@ -348,6 +429,8 @@
                     name.textContent = movie.Name + (movie.Year ? ' (' + movie.Year + ')' : '');
                     if (hint) { name.appendChild(el('div', hint, 'tm-muted')); }
                     row.appendChild(name);
+                    var request = seerrControl(movie);
+                    if (request) { row.appendChild(request); }
                     var add = btn(inList(movie) ? 'Added' : 'Add', function () {
                         if (state.entries.length >= state.topic.Size) {
                             Dashboard.alert({ title: 'Tastemate', message: 'Your list is full (' + state.topic.Size + '). Remove a movie first.' });
@@ -414,6 +497,7 @@
                         var extra = remoteMovies.filter(function (m) { return !inLibrary[m.TmdbId]; });
                         if (!extra.length) { otherBox.appendChild(el('div', 'No other matches.', 'tm-muted')); }
                         extra.forEach(function (m) { addRow(otherBox, m, 'Not in your library'); });
+                        loadSeerrStates(extra);
                     });
                 }
 
@@ -516,6 +600,7 @@
                     show('TmListView');
                     ApiClient.getCurrentUser().then(function (user) {
                         state.isAdmin = !!(user && user.Policy && user.Policy.IsAdministrator);
+                        loadSeerr();
                         return loadLists();
                     }, fail);
                 });

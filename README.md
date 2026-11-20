@@ -10,6 +10,7 @@ Define a topic such as "Top 10 Horror Movies". Every user ranks movies from the 
 - **Rankings**: each user keeps one ranking per topic. A movie can only appear once per list and ranks must be unique.
 - **Reasons**: add a short reason (up to 280 characters) to any entry to say why it is in your top list. Reasons are shown to the other user when you compare.
 - **Movies outside your library**: search finds movies in your library and, through Jellyfin's built-in TMDb metadata provider, any other movie. Movies that are not in the library can still be ranked, with the poster from TMDb.
+- **Seerr requests** (optional): an administrator links a [Seerr](https://seerr.dev/) server in the Tastemate page. Movies that are not in the library then get a "Request in Seerr" button, with their Seerr state (requested, downloading, available). Requests are made as the user's own Seerr account, matched by Jellyfin user id or user name. Users need to have signed in to Seerr with Jellyfin once.
 - **Comparison**: compare your ranking with any other user's ranking for the same topic. The result lists shared movies with both ranks, movies only in one list, and a similarity score.
 - **Dashboard page**: manage topics, edit your ranking and run comparisons from the "Tastemate" page in the Jellyfin dashboard sidebar.
 
@@ -97,6 +98,8 @@ The tag becomes the plugin version (`v0.3.0` is published as `0.3.0.0`). Version
 
 ## Configuration
 
+Seerr is set up in the Tastemate page (administrators see a Seerr box under the lists): enter the Seerr address and an API key from Seerr Settings > General. The settings are checked against Seerr before they are saved. The API key is stored in the plugin configuration and never sent back to the browser. Clear the address to turn the integration off.
+
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `MaxTopSize` | 25 | Maximum number of entries a topic may have. |
@@ -117,6 +120,9 @@ All endpoints require an authenticated user and live under `/Tastemate`.
 | PUT | `/Tastemate/Topics/{topicId}/Ranking` | Replace the caller's ranking. Each entry has `Rank`, an optional `Reason`, and either `ItemId` (library movie) or `TmdbId`, `Title`, optional `Year` and `Poster` (a `https://image.tmdb.org/` address). |
 | GET | `/Tastemate/Search?query=&year=` | Search movies with the server's metadata providers. Returns `TmdbId`, `Name`, `Year`, `Poster`. |
 | GET | `/Tastemate/Topics/{topicId}/Compare/{otherUserId}` | Compare the caller with another user. |
+| GET | `/Tastemate/Seerr/Status?tmdbIds=` | Whether Seerr is configured and the state (`none`, `pending`, `processing`, `partial`, `available`) of up to 25 comma separated TMDb ids. |
+| POST | `/Tastemate/Seerr/Request` | Request a movie (`TmdbId`) in Seerr as the caller's linked Seerr user. |
+| GET, PUT | `/Tastemate/Seerr/Settings` | Read or change `Address` and `ApiKey` (administrators only; the key is never returned). |
 
 ## Data
 
