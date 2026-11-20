@@ -53,6 +53,7 @@
                     <form id="TmSeerr" class="tm-card hide" style="margin-top:2em;max-width:36em">
                         <h3>Seerr</h3>
                         <div class="tm-muted">Lets users request movies that are not in the library. Requests are made as the user's own Seerr account (matched by Jellyfin user). Leave the address empty to turn this off.</div>
+                        <div id="TmSeerrNote" class="tm-muted hide"></div>
                         <div class="inputContainer">
                             <label class="inputLabel inputLabelUnfocused" for="TmSeerrAddress">Seerr address (e.g. http://seerr:5055)</label>
                             <input id="TmSeerrAddress" type="text" is="emby-input" />
@@ -231,9 +232,14 @@
                     if (!state.isAdmin) { return; }
                     api('GET', 'Seerr/Settings').then(function (s) {
                         $('#TmSeerr').classList.remove('hide');
-                        $('#TmSeerrAddress').value = s.Address;
+                        var inherited = s.Source === 'jellyfin-enhanced';
+                        $('#TmSeerrAddress').value = inherited ? '' : s.Address;
                         $('#TmSeerrKey').value = '';
-                        $('#TmSeerrKey').placeholder = s.HasApiKey ? 'Saved. Leave empty to keep it.' : '';
+                        $('#TmSeerrKey').placeholder = s.HasApiKey && !inherited ? 'Saved. Leave empty to keep it.' : '';
+                        var note = $('#TmSeerrNote');
+                        note.classList.toggle('hide', !inherited && !s.EnhancedInstalled);
+                        note.textContent = inherited ? 'Using the Seerr settings of Jellyfin Enhanced (' + s.Address + '). Fill in the fields below to use a different Seerr.'
+                            : 'Jellyfin Enhanced is installed. Turn on its Seerr integration and Tastemate will use those settings, or enter them here.';
                     }, function () { /* not available */ });
                 }
 

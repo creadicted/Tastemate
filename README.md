@@ -100,6 +100,8 @@ The tag becomes the plugin version (`v0.3.0` is published as `0.3.0.0`). Version
 
 Seerr is set up in the Tastemate page (administrators see a Seerr box under the lists): enter the Seerr address and an API key from Seerr Settings > General. The settings are checked against Seerr before they are saved. The API key is stored in the plugin configuration and never sent back to the browser. Clear the address to turn the integration off.
 
+If [Jellyfin Enhanced](https://github.com/n00bcodr/Jellyfin-Enhanced) is installed with its Seerr integration turned on, Tastemate uses its Seerr address (the first one listed) and API key, so there is nothing to set up twice. Settings entered in Tastemate take precedence. Tastemate reads them from the other plugin's configuration by property name, so a Jellyfin Enhanced update that renames them stops the fallback until Tastemate is updated.
+
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `MaxTopSize` | 25 | Maximum number of entries a topic may have. |

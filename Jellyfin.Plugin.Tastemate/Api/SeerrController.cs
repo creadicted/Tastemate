@@ -26,16 +26,19 @@ public class SeerrController : ControllerBase
     private const int MaxStatusIds = 25;
 
     private readonly SeerrClient _seerr;
+    private readonly SeerrSettingsResolver _resolver;
     private readonly IUserManager _userManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SeerrController"/> class.
     /// </summary>
     /// <param name="seerr">Instance of the <see cref="SeerrClient"/> class.</param>
+    /// <param name="resolver">Instance of the <see cref="SeerrSettingsResolver"/> class.</param>
     /// <param name="userManager">Instance of the <see cref="IUserManager"/> interface.</param>
-    public SeerrController(SeerrClient seerr, IUserManager userManager)
+    public SeerrController(SeerrClient seerr, SeerrSettingsResolver resolver, IUserManager userManager)
     {
         _seerr = seerr;
+        _resolver = resolver;
         _userManager = userManager;
     }
 
@@ -51,8 +54,7 @@ public class SeerrController : ControllerBase
             return Forbid();
         }
 
-        var config = Plugin.Instance?.Configuration;
-        return Ok(new SeerrSettingsDto(config?.SeerrAddress ?? string.Empty, !string.IsNullOrEmpty(config?.SeerrApiKey)));
+        return Ok(CurrentSettings());
     }
 
     /// <summary>
@@ -82,7 +84,7 @@ public class SeerrController : ControllerBase
             config.SeerrAddress = string.Empty;
             config.SeerrApiKey = string.Empty;
             plugin.SaveConfiguration();
-            return Ok(new SeerrSettingsDto(string.Empty, false));
+            return Ok(CurrentSettings());
         }
 
         if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
@@ -105,7 +107,7 @@ public class SeerrController : ControllerBase
         config.SeerrAddress = address.TrimEnd('/');
         config.SeerrApiKey = apiKey;
         plugin.SaveConfiguration();
-        return Ok(new SeerrSettingsDto(config.SeerrAddress, true));
+        return Ok(CurrentSettings());
     }
 
     /// <summary>
@@ -178,6 +180,12 @@ public class SeerrController : ControllerBase
         var state = await _seerr.GetStateAsync(tmdbId, cancellationToken).ConfigureAwait(false);
         var name = ToName(state == SeerrMovieState.None ? SeerrMovieState.Pending : state);
         return Ok(new SeerrStatusResponse(true, new Dictionary<string, string> { [request.TmdbId] = name }));
+    }
+
+    private SeerrSettingsDto CurrentSettings()
+    {
+        var connection = _resolver.Resolve();
+        return new SeerrSettingsDto(connection?.Address ?? string.Empty, connection is not null, connection?.Source ?? "none", _resolver.JellyfinEnhancedInstalled);
     }
 
     private static string ToName(SeerrMovieState state)

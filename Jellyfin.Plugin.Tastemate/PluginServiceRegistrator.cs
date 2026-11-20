@@ -14,6 +14,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
         serviceCollection.AddSingleton<TopStore>();
+        serviceCollection.AddSingleton<SeerrSettingsResolver>();
         serviceCollection.AddSingleton<SeerrClient>();
     }
 }

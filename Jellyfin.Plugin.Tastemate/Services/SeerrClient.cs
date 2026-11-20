@@ -21,29 +21,23 @@ public class SeerrClient
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(15);
 
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly SeerrSettingsResolver _settings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SeerrClient"/> class.
     /// </summary>
     /// <param name="httpClientFactory">Instance of the <see cref="IHttpClientFactory"/> interface.</param>
-    public SeerrClient(IHttpClientFactory httpClientFactory)
+    /// <param name="settings">Instance of the <see cref="SeerrSettingsResolver"/> class.</param>
+    public SeerrClient(IHttpClientFactory httpClientFactory, SeerrSettingsResolver settings)
     {
         _httpClientFactory = httpClientFactory;
+        _settings = settings;
     }
 
     /// <summary>
     /// Gets a value indicating whether an address and API key are configured.
     /// </summary>
-    public bool IsConfigured
-    {
-        get
-        {
-            var config = Plugin.Instance?.Configuration;
-            return config is not null
-                && !string.IsNullOrWhiteSpace(config.SeerrAddress)
-                && !string.IsNullOrWhiteSpace(config.SeerrApiKey);
-        }
-    }
+    public bool IsConfigured => _settings.Resolve() is not null;
 
     /// <summary>
     /// Checks that an address and API key work.
@@ -226,8 +220,10 @@ public class SeerrClient
 
     private Task<HttpResponseMessage> SendConfiguredAsync(HttpMethod method, string path, HttpContent? content, CancellationToken cancellationToken)
     {
-        var config = Plugin.Instance?.Configuration;
-        return SendAsync(method, config?.SeerrAddress ?? string.Empty, config?.SeerrApiKey ?? string.Empty, path, content, cancellationToken);
+        var connection = _settings.Resolve();
+        return connection is null
+            ? Task.FromException<HttpResponseMessage>(new HttpRequestException("Seerr is not configured."))
+            : SendAsync(method, connection.Address, connection.ApiKey, path, content, cancellationToken);
     }
 
     private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string address, string apiKey, string path, HttpContent? content, CancellationToken cancellationToken)
